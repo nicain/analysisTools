@@ -493,10 +493,11 @@ def listNames(saveResultDir = 'savedResults'):
 ################################################################################
 # This function prints out a nicely formatted settings string:
 def printSettings(quickName = -1, saveResultDir = 'savedResults', whichRun = 0):
+
 	if quickName == -1:
 		quickName = getLastQuickName(saveResultDir = 'savedResults')
 
-	printString = getSettingsString(quickName, saveResultDir = 'savedResults', whichRun = whichRun)
+	printString = getSettingsString(quickName, saveResultDir = saveResultDir, whichRun = whichRun)
 	print printString
 	return
 
