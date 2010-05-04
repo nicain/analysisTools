@@ -593,10 +593,11 @@ def IDquickNameDictionary(saveResultDir = 'savedResults'):
 	resultDict = {}
 	for root, dirs, files in os.walk('./' + saveResultDir):
 		for name in files:
-			quickNameAndID,suffix = name.split('.')
-			if suffix == 'settings':
-				quickName, ID = quickNameAndID.split('_')
-				resultDict[ID] = quickName
+			if len(name.split('.')) > 1:
+				quickNameAndID,suffix = name.split('.')
+				if suffix == 'settings':
+					quickName, ID = quickNameAndID.split('_')
+					resultDict[ID] = quickName
 	return resultDict
 
 ################################################################################
@@ -607,24 +608,25 @@ def quickNameIDDictionary(saveResultDir = 'savedResults',includeRepeats = 0):
 	resultDict = {}
 	for root, dirs, files in os.walk('./' + saveResultDir):
 		for name in files:
-			quickNameAndID,suffix = name.split('.')
-			if suffix == 'settings':
-				st = os.stat(os.path.join(root, name))
-				quickName, ID = quickNameAndID.split('_')
-				IDTime = st[8]
-				fIn = open(os.path.join(root, name),'r')
-				settingTuple = pickle.load(fIn)
+			if len(name.split('.')) > 1:
+				quickNameAndID,suffix = name.split('.')
+				if suffix == 'settings':
+					st = os.stat(os.path.join(root, name))
+					quickName, ID = quickNameAndID.split('_')
+					IDTime = st[8]
+					fIn = open(os.path.join(root, name),'r')
+					settingTuple = pickle.load(fIn)
 
-				if not(resultDict.has_key(quickName)):
-					resultDict[quickName] = [(ID, IDTime)]
-				else:
-					tempList = resultDict[quickName]
-					tempList.append((ID, IDTime))
-					tempListSorted = sorted(tempList, key=operator.itemgetter(1))
-					if includeRepeats:
-						resultDict[quickName] = tempListSorted
+					if not(resultDict.has_key(quickName)):
+						resultDict[quickName] = [(ID, IDTime)]
 					else:
-						resultDict[quickName] = [tempListSorted[-1]]
+						tempList = resultDict[quickName]
+						tempList.append((ID, IDTime))
+						tempListSorted = sorted(tempList, key=operator.itemgetter(1))
+						if includeRepeats:
+							resultDict[quickName] = tempListSorted
+						else:
+							resultDict[quickName] = [tempListSorted[-1]]
 	return resultDict
 
 ################################################################################
