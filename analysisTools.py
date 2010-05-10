@@ -593,7 +593,7 @@ def IDquickNameDictionary(saveResultDir = 'savedResults'):
 	resultDict = {}
 	for root, dirs, files in os.walk('./' + saveResultDir):
 		for name in files:
-			if len(name.split('.')) > 1:
+			if len(name.split('.')) > 1 and len(name.split('.')) < 3:
 				quickNameAndID,suffix = name.split('.')
 				if suffix == 'settings':
 					quickName, ID = quickNameAndID.split('_')
