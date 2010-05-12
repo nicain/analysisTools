@@ -477,7 +477,7 @@ def reduceThetaOptimize(crossTimeCube, resultCube, dims, tDel = 2000, tPen = 0, 
 
 ################################################################################
 # This function lists the job names that are available:
-def listNames(saveResultDir = 'savedResults'):
+def listNames(saveResultDir = 'savedResults', N=10):
 
 	import operator
 	nameDict = quickNameIDDictionary(saveResultDir,includeRepeats = 0)
@@ -486,8 +486,11 @@ def listNames(saveResultDir = 'savedResults'):
 		nameTimeList.append((item, nameDict[item][0][1]))
 	nameTimeListSorted = sorted(nameTimeList, key=operator.itemgetter(1),reverse=True)
 	print ' Available job names:'
+	counter = 0
 	for name in nameTimeListSorted:
-		print '   ' + name[0]
+		counter += 1
+		if counter <= N:
+			print '   ' + name[0]
 	return
 
 ################################################################################
