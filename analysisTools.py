@@ -347,6 +347,15 @@ def plot1D( sliceDict, whatToPlot,saveResultDir = 'savedResults', whichRun = 0, 
 	permuteList[0], permuteList[whereIsXDim] = permuteList[whereIsXDim], permuteList[0]
 	crossTimeData = transpose(crossTimeData,permuteList)
 	resultData = transpose(resultData,permuteList)
+    
+	# Reorder dimension list and cube to put theta variable last:
+	if 'theta' in sliceDict:
+		permuteList = range(len(dims))
+		whereIsXDim = dims.index('theta')
+		dims[-1], dims[whereIsXDim] = dims[whereIsXDim], dims[-1]
+		permuteList[-1], permuteList[whereIsXDim] = permuteList[whereIsXDim], permuteList[-1]
+		crossTimeData = transpose(crossTimeData,permuteList)
+		resultData = transpose(resultData,permuteList)
 	
 	# Collapse all non-constant dimensions:
 	crossDims = dims[:]
@@ -409,6 +418,9 @@ def reduce1D(crossTimeCube, resultCube, dims, varToReduce, vals, sliceVal, tDel 
 	if varToReduce == 'theta' and sliceVal == 'Optimize':
 		reduceTuple = reduceThetaOptimize(crossTimeCube, resultCube, dims, tDel = tDel, tPen = tPen, tND = tND)
 		return reduceTuple
+	if isinstance(sliceVal,list) and sliceVal[0] == 'Marginalize':
+		reduceTuple = reduceMarginalize(crossTimeCube, resultCube, dims, varToReduce, vals, sliceVal[1],sliceVal[2])
+		return reduceTuple
 	else:
 		for i in range(len(vals)-1):
 			if vals[i] <= sliceVal and sliceVal < vals[i+1]:
@@ -433,6 +445,60 @@ def reduce1D(crossTimeCube, resultCube, dims, varToReduce, vals, sliceVal, tDel 
 			resultCubeReduce = resultCube[tuple(indexListR)]
 		dims.remove(varToReduce)
 		return (crossTimeCubeReduce, resultCubeReduce, dims)
+
+################################################################################
+# This function reduces a dimension by marginalizing:
+def reduceMarginalize(crossTimeCube, resultCube, dims, varToReduce, vals, distribution, distributionSettings):
+
+	# Import necessary packages:
+	import copy
+	import numpy as np
+
+	# Pick Distribution:
+	numOfValues = len(vals)
+	vals = np.array(vals)
+	if distribution == 'Normal':
+		delta = vals[1]-vals[0]
+		vals = vals - delta*1./2
+		L = np.append(vals[1]-10000, vals[1:])
+		R = np.append(vals[1:], vals[-1]+10000)
+		probDists = [0]*len(L)
+		for j in range(len(L)):
+			probDists[j] = intErfAB(L[j], R[j], mu=distributionSettings[0], sigma=distributionSettings[1])
+	elif distribution == 'Delta':
+		probDists = np.zeros(numOfValues)
+		deltaIndex = np.argmin(np.abs(vals-distributionSettings))
+		probDists[deltaIndex] = 1
+	elif distribution == 'Uniform':
+		probDists = np.zeros(numOfValues)        
+		deltaIndexL = np.argmin(np.abs(vals-distributionSettings[0]))
+		deltaIndexR = np.argmin(np.abs(vals-distributionSettings[1]))
+		numNonZero = deltaIndexR - deltaIndexL + 1
+		probDists[deltaIndexL:(deltaIndexR + 1)] = 1./numNonZero
+	else:
+		print 'Not Supported: ' + distribution
+		import sys
+		sys.exit()
+        
+    # Double-check the distribution:
+	if np.sum(probDists) < .999:
+		print 'pmf doent sum to 1'
+		print np.sum(probDists)
+		import sys
+		sys.exit()
+		
+	# Marginalize across variable:
+	marginalVal = vals[0]
+	marginalCrossTimeCube, marginalResultCube, dimsMarginal = reduce1D(crossTimeCube, resultCube, copy.copy(dims), varToReduce, vals, marginalVal)
+	marginalCrossTimeCube *= probDists[0]
+	marginalResultCube *= probDists[0]
+	for j in range(1,numOfValues):
+		marginalVal = vals[j]
+		crossTimeCubeTemp, resultCubeTemp, dimsMarginalTemp = reduce1D(crossTimeCube, resultCube, copy.copy(dims), varToReduce, vals, marginalVal)
+		marginalCrossTimeCube += probDists[j]*crossTimeCubeTemp
+		marginalResultCube += probDists[j]*resultCubeTemp
+
+	return (marginalCrossTimeCube, marginalResultCube, dimsMarginal)
 	
 ################################################################################
 # This function reduces the Theta dimension through RR optimization:
@@ -465,12 +531,6 @@ def reduceThetaOptimize(crossTimeCube, resultCube, dims, tDel = 2000, tPen = 0, 
 		crossTimeCubeReduce[tuple(indexListOut)] = crossTimeCube[tuple(indexList)]
 		resultCubeReduce[tuple(indexListOut)] = resultCube[tuple(indexList)]
 		
-
-
-
-
-
-
 	dims.remove('theta')
 	return (crossTimeCubeReduce, resultCubeReduce, dims)
 	
@@ -731,7 +791,7 @@ def export1D( sliceDict, whatToPlot,saveResultDir = 'savedResults', whichRun = 0
 	crossTimeSlice = squeeze(crossTimeData)
 	resultSlice = squeeze(resultData)
 	
-	# Create x-axis values, and plot:
+	# Create x-axis values, and plot data:
 	xVals = settings[xDimension]
 	if whatToPlot == 'RR':
 		depVar = 1000*resultSlice/(crossTimeSlice + tND + tDel + (1-resultSlice)*tPen)
@@ -743,4 +803,42 @@ def export1D( sliceDict, whatToPlot,saveResultDir = 'savedResults', whichRun = 0
 
 	return xVals, depVar
 
+################################################################################
+# Define the functions for the gaussian integral:
+def intErfAB(a, b, mu=0, sigma=1):
+
+	# Import necessary functions:
+	import math
+	
+	# Ill need erf(x)
+	def erf(x):
+		# save the sign of x
+		sign = 1
+		if x < 0: 
+			sign = -1
+		x = abs(x)
+
+		# constants
+		a1 =  0.254829592
+		a2 = -0.284496736
+		a3 =  1.421413741
+		a4 = -1.453152027
+		a5 =  1.061405429
+		p  =  0.3275911
+
+		# A&S formula 7.1.26
+		t = 1.0/(1.0 + p*x)
+		y = 1.0 - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t*math.exp(-x*x)
+		return sign*y
+	
+	a=a*1.
+	b=b*1.
+	mu=mu*1.
+	sigma=sigma*1.
+	C1 = (b-mu)/(math.sqrt(2)*sigma)
+	C2 = (a-mu)/(math.sqrt(2)*sigma)
+	P1 = erf(C1)
+	P2 = erf(C2)
+	
+	return .5*(P1-P2)
 	
