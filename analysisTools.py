@@ -3,6 +3,147 @@
 #  Copyright (c) 2009 __MyCompanyName__. All rights reserved.
 
 ################################################################################
+# This function plots creates a multiline speed accuracy plot:
+def speedAccuracyMultiLine(sliceDict, saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 300, newFigure = 1, quickName = -1, N = 5, colorBar = 1, titleString = -1, lims = -1, plotLabels = 1, color = [], saveFig=0):
+	from numpy import array, linspace, inf
+	from pylab import figure, subplots_adjust, cm, flipud, pcolor, colorbar, hold, savefig
+	import pylab as pl
+	import copy
+	if quickName == -1:
+		quickName = getLastQuickName(saveResultDir = 'savedResults')
+
+	seqDimensionTuple = sliceDict['MultiLineVar']
+	if isinstance(seqDimensionTuple, str):
+		seqDimension = seqDimensionTuple
+		settings, FD, numberOfJobs, gitVersion =  getSettings(quickName, saveResultDir, whichRun=whichRun)
+		vals = settings[seqDimension]
+		seqDimensionList = linspace(min(vals), max(vals), N)
+	else:
+		seqDimension = seqDimensionTuple[0]
+		seqDimensionList = seqDimensionTuple[1]
+		
+	if color == []:
+		seqDimensionListArray = array(seqDimensionList, dtype=float)
+		colorMatrix=cm.autumn_r((seqDimensionListArray-min(seqDimensionListArray))/(max(seqDimensionListArray)-min(seqDimensionListArray)))
+	if colorBar: pcolor(array([[min(seqDimensionList),max(seqDimensionList)]]),cmap=cm.autumn_r,visible=False)
+
+	del sliceDict['MultiLineVar']
+	if newFigure:
+		figure()
+	minX = inf
+	minY = inf
+	maxX = -inf
+	maxY = -inf
+	figure(99)
+	for i in range(len(seqDimensionList)):
+		sliceDict[seqDimension] = seqDimensionList[i]
+		thisPlot = speedAccuracy(copy.copy(sliceDict),saveResultDir = saveResultDir, whichRun = whichRun, tDel = tDel, tPen = tPen, tND = tND, quickName = quickName, newFigure = 0, plotLabels = -1, lims = -1, color = colorMatrix[i])
+		if min(thisPlot[0].get_ydata()) < minY:
+			minY = min(thisPlot[0].get_ydata())
+		if max(thisPlot[0].get_ydata()) > maxY:
+			maxY = max(thisPlot[0].get_ydata())
+		if min(thisPlot[0].get_xdata()) < minX:
+			minX = min(thisPlot[0].get_xdata())
+		if max(thisPlot[0].get_xdata()) > maxX:
+			maxX = max(thisPlot[0].get_xdata())
+	pl.close()
+			
+	if lims == -1:
+		lims = ((minX, maxX),(minY, maxY))
+	
+	if newFigure:
+		pl.figure()
+	else:
+		figure(1)		
+		
+	for i in range(len(seqDimensionList)):
+		sliceDict[seqDimension] = seqDimensionList[i]
+		if titleString == -1:
+			titleString = ''
+		thisPlot = speedAccuracy(copy.copy(sliceDict),saveResultDir = saveResultDir, whichRun = whichRun, tDel = tDel, tPen = tPen, tND = tND, quickName = quickName, lims = lims, newFigure = 0, plotLabels = -1, color = colorMatrix[i])	
+		
+	if colorBar: 
+		cb = colorbar()
+		cb.set_label('Color variable: ' + seqDimension)
+		
+	if plotLabels == 1:
+		pl.xlabel('RT')
+		pl.ylabel('FC')
+		
+	if saveFig != 0:
+		savefig('/Users/Nick/Desktop/fig1.eps')
+	
+	
+	return lims
+
+################################################################################
+# This function plots speed accuracy tradeoff function:
+def speedAccuracy(sliceDict, saveResultDir = 'savedResults',tDel = 2000, tPen = 0, tND = 300, whichRun = 0, newFigure = 1, quickName = -1, saveFig=0, plotLabels = 1, color = -1, lims = -1):
+	import pylab as pl
+	from numpy import transpose, shape, squeeze, ndarray, array, mean, exp
+	import copy
+
+
+	if quickName == -1:
+		quickName = getLastQuickName(saveResultDir = 'savedResults')
+	
+	# Get data:
+	crossTimeData, resultData, dims, settings, FD, numberOfJobs, gitVersion =  getDataAndSettings(quickName, saveResultDir, whichRun)
+	crossTimeData += tND 
+    
+	# Reorder dimension list and cube to put theta variable last:
+	if 'theta' in sliceDict:
+		permuteList = range(len(dims))
+		whereIsXDim = dims.index('theta')
+		dims[-1], dims[whereIsXDim] = dims[whereIsXDim], dims[-1]
+		permuteList[-1], permuteList[whereIsXDim] = permuteList[whereIsXDim], permuteList[-1]
+		crossTimeData = transpose(crossTimeData,permuteList)
+		resultData = transpose(resultData,permuteList)
+	
+	# Collapse all non-constant dimensions:
+	crossDims = dims[:]
+	resultDims = dims[:]
+	for collapseDim in iter(sliceDict):
+		crossTimeData, resultData, crossDims = reduce1D(crossTimeData, resultData, crossDims, collapseDim, settings[collapseDim], sliceDict[collapseDim], tDel = tDel, tPen = tPen, tND = tND)
+	crossTimeSlice = squeeze(crossTimeData)
+	resultSlice = squeeze(resultData)
+	
+	# Get x and y data:
+	sliceDict['XVar'] = 'theta'
+	counter = -1
+	X=[0]*2
+	Y=[0]*2
+	for yAxis in ['RT','FC']:
+		counter += 1
+		# Get data:
+		X[counter], Y[counter] = (export1D(copy.copy(sliceDict), yAxis, whichRun=whichRun, 
+					  quickName=quickName))
+	myRT, myFC = Y[0],Y[1]
+	
+	if newFigure:
+		pl.figure()
+	
+	if not(isinstance(color,ndarray)):
+		myPlot = pl.plot(myRT,myFC)
+	else:
+		myPlot = pl.plot(myRT,myFC, color = color)
+
+	if lims != -1:
+		pl.xlim(lims[0][0], lims[0][1])
+		pl.ylim(lims[1][0], lims[1][1])
+		
+	if plotLabels == 1:
+		pl.xlabel('RT')
+		pl.ylabel('FC')
+	
+	if saveFig != 0:
+		pl.savefig('/Users/Nick/Desktop/fig1.eps')
+	
+	return myPlot
+
+
+
+################################################################################
 # This function plots a sequence  of 1-D multi plots:
 def plot1DSeqMultiLine(sliceDict, whatToPlot, saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 300, newFigure = 1, quickName = -1, seqLength = 4, N=5, saveFig=0, colorBar=1):
 	from numpy import array, linspace, inf
@@ -386,16 +527,19 @@ def plot1D( sliceDict, whatToPlot,saveResultDir = 'savedResults', whichRun = 0, 
 	else:
 		myPlot = pl.plot(xVals,depVar, color = color)
 	pl.xlim((min(xVals),max(xVals)))
-		
+	
 	# Add RT and ER physiological data is appropriate:
-	if (whatToPlot == 'FC') and (xDimension == 'xMean'):
+	if FD == 1:
+		inputSet = 'FD'
+	else:
+		inputSet = 'RT'
+	if (whatToPlot == 'FC') and ((xDimension == 'xMean') or (xDimension == 'C') or (xDimension == 'CPre')):
 		CData=array([0,3.2,6.4,12.8,25.6,51.2])
-		FC, RT = getRoitmanPsyChr()
+		FC, RT = getRoitmanPsyChr(inputSet)
 		pl.plot(CData,FC,'o')
-		
-	elif (whatToPlot == 'RT') and (xDimension == 'xMean'):
+	elif (whatToPlot == 'RT') and ((xDimension == 'xMean') or (xDimension == 'C') or (xDimension == 'CPre')) and (FD == 0):
 		CData=array([0,3.2,6.4,12.8,25.6,51.2])
-		FC, RT = getRoitmanPsyChr()
+		FC, RT = getRoitmanPsyChr(inputSet)
 		pl.plot(CData, RT,'o')
 		
 	if yLims != -1:
@@ -733,8 +877,11 @@ def getTrials(quickName = -1, saveResultDir = 'savedResults'):
 	
 ################################################################################
 # This function loads the Roitman Data Set, psychr:
-def getRoitmanPsyChr():
-	psyChrFileName = 'Roitman_data_psychoCronoData.dat'
+def getRoitmanPsyChr(inputSet):
+	if inputSet == 'RT':
+		psyChrFileName = 'Roitman_data_psychoCronoData.dat'
+	elif inputSet == 'FD':
+		psyChrFileName = 'Roitman_data_psychoCronoDataFD.dat'
 	
 	f = open(psyChrFileName, 'r')
 	FC = [0]*6
@@ -802,6 +949,128 @@ def export1D( sliceDict, whatToPlot,saveResultDir = 'savedResults', whichRun = 0
 	else: print ' Unrecognized plot option ' + whatToPlot
 
 	return xVals, depVar
+
+################################################################################
+# This function exports a 1-D slice:
+def export1Elem( sliceDict, whatToReturn = 'both',saveResultDir = 'savedResults', whichRun = 0, quickName = -1,tND = 300):
+	from numpy import transpose, shape, squeeze, ndarray, array, mean, exp
+	import pylab as pl, copy
+	if quickName == -1:
+		quickName = getLastQuickName(saveResultDir = 'savedResults')
+
+	# Get data:
+	crossTimeData, resultData, dims, settings, FD, numberOfJobs, gitVersion =  getDataAndSettings(quickName, saveResultDir, whichRun)
+	
+	# Reorder dimension list and cube:
+	permuteList = range(len(dims))
+	crossTimeData = transpose(crossTimeData,permuteList)
+	resultData = transpose(resultData,permuteList)
+	
+	# Collapse all non-constant dimensions:
+	crossDims = dims[:]
+	resultDims = dims[:]
+	for collapseDim in iter(sliceDict):
+		crossTimeData, resultData, crossDims = reduce1D(crossTimeData, resultData, crossDims, collapseDim, settings[collapseDim], sliceDict[collapseDim])
+	crossTimeSlice = squeeze(crossTimeData)
+	resultSlice = squeeze(resultData)
+
+
+	if whatToReturn == 'both':
+		return (crossTimeSlice.tolist() + tND, resultSlice.tolist())
+	elif whatToReturn == 'FC':
+		return resultSlice.tolist()
+	elif whatToReturn == 'RT':
+		return crossTimeSlice.tolist() + tND
+	else:
+		return -1
+
+################################################################################
+# This function plots a histogram:
+def histPlot( sliceDict,saveResultDir = 'savedResults', whichRun = 0, quickName = -1,tND = 300, bins=10, normed=True, plotsOn = 1,center=1):
+	from numpy import transpose, shape, squeeze, ndarray, array, mean, exp, atleast_2d
+
+	import pylab as pl
+	import pickle
+	if quickName == -1:
+		quickName = getLastQuickName(saveResultDir = 'savedResults')
+
+	# Get hash value:
+	hashInd = int(export1Elem( sliceDict, whatToReturn = 'FC',saveResultDir = 'savedResults', whichRun = whichRun, quickName = quickName,tND = tND))
+	
+	# Load actual data:
+	ID = quickNameToID(quickName, saveResultDir, whichRun=whichRun)
+	fileName = getFileString(ID,'dat', saveResultDir)
+	first,second = fileName.split('.')
+	fileName = first + 'Hash' + '.' +second
+	fIn = open('./' + saveResultDir + '/' + fileName,'r')
+	resultTuple = pickle.load(fIn)
+	myRTData = transpose(atleast_2d(resultTuple[0][hashInd]))
+
+	# Center if desired:
+	if center == 1:
+		myRTData = myRTData - np.mean(myRTData)
+	
+	# Plot the histogram:
+	if plotsOn:
+		pl.figure(1)
+		pl.hist(myRTData,bins=bins,normed=normed)
+	
+	return myRTData
+
+################################################################################
+# This function plots a histogram:
+def histPlotMultiBar(sliceDict,saveResultDir = 'savedResults', whichRun = 0, quickName = -1,tND = 300, bins=10, normed=True, plotsOn = 1,center=1,N=2):
+	from numpy import transpose, shape, squeeze, ndarray, array, mean, exp, atleast_2d, linspace, concatenate
+
+	import pylab as pl
+	import pickle
+	if quickName == -1:
+		quickName = getLastQuickName(saveResultDir = 'savedResults')
+
+	# Get data:
+	crossTimeData, resultData, dims, settings, FD, numberOfJobs, gitVersion =  getDataAndSettings(quickName, saveResultDir, whichRun)
+	
+	# Get multiBar stats:
+	seqDimensionTuple = sliceDict['MultiBarVar']
+	if isinstance(seqDimensionTuple, str):
+		seqDimension = seqDimensionTuple
+		settings, FD, numberOfJobs, gitVersion =  getSettings(quickName, saveResultDir, whichRun=whichRun)
+		vals = settings[seqDimension]
+		seqDimensionList = linspace(min(vals), max(vals), N)
+	else:
+		seqDimension = seqDimensionTuple[0]
+		seqDimensionList = seqDimensionTuple[1]
+	del sliceDict['MultiBarVar']
+
+	# Get hash value:
+	hashInd = [0]*len(seqDimensionList)
+	for i in range(len(hashInd)):
+		sliceDict[seqDimension] = seqDimensionList[i]
+		hashInd[i] = int(export1Elem( sliceDict, whatToReturn = 'FC',saveResultDir = 'savedResults', whichRun = whichRun, quickName = quickName,tND = tND))
+	
+	# Load actual data:
+	ID = quickNameToID(quickName, saveResultDir, whichRun=whichRun)
+	fileName = getFileString(ID,'dat', saveResultDir)
+	first,second = fileName.split('.')
+	fileName = first + 'Hash' + '.' +second
+	fIn = open('./' + saveResultDir + '/' + fileName,'r')
+	resultTuple = pickle.load(fIn)
+	
+	myRTData = [0]*len(seqDimensionList)
+	for i in range(len(hashInd)):
+		myRTData[i] = transpose(atleast_2d(resultTuple[0][hashInd[i]]))
+
+		# Center if desired:
+		if center == 1:
+			myRTData[i] = myRTData[i] - mean(myRTData[i])
+	
+	# Plot the histogram:
+	if plotsOn:
+		pl.figure(1)
+		pl.hist(concatenate(myRTData,axis=1),bins=bins,normed=normed)
+	
+	return myRTData
+
 
 ################################################################################
 # Define the functions for the gaussian integral:
