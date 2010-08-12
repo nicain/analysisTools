@@ -147,7 +147,7 @@ def speedAccuracy(sliceDict, saveResultDir = 'savedResults',tDel = 2000, tPen = 
 # This function plots a sequence  of 1-D multi plots:
 def plot1DSeqMultiLine(sliceDict, whatToPlot, saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 300, newFigure = 1, quickName = -1, seqLength = 4, N=5, saveFig=0, colorBar=1):
 	from numpy import array, linspace, inf
-	from pylab import figure, subplot, suptitle, subplots_adjust, savefig
+	from pylab import figure, subplot, suptitle, subplots_adjust, savefig, ylim
 	import copy
 	if quickName == -1:
 		quickName = getLastQuickName(saveResultDir = 'savedResults')
@@ -198,7 +198,8 @@ def plot1DSeqMultiLine(sliceDict, whatToPlot, saveResultDir = 'savedResults', wh
 	if whatToPlot == 'RR':
 		suptitle('Reward Rate')
 	elif whatToPlot == 'FC':
-		suptitle('Fraction Correct')	
+		suptitle('Fraction Correct')
+		ylim([.5,1])
 	elif whatToPlot == 'RT':
 		suptitle('Reaction Time')
 	
@@ -216,7 +217,7 @@ def plot1DSeqMultiLine(sliceDict, whatToPlot, saveResultDir = 'savedResults', wh
 # This function plots creates a multiline plot:
 def plot1DMultiLine(sliceDict, whatToPlot, saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 300, newFigure = 1, quickName = -1, N = 5, colorBar = 1, titleString = -1, yLims = -1, plotYLabel = 1, color = [], saveFig=0):
 	from numpy import array, linspace, inf
-	from pylab import figure, subplots_adjust, cm, flipud, pcolor, colorbar, hold, savefig
+	from pylab import figure, subplots_adjust, cm, flipud, pcolor, colorbar, hold, savefig, ylim
 	import copy
 	if quickName == -1:
 		quickName = getLastQuickName(saveResultDir = 'savedResults')
@@ -269,6 +270,9 @@ def plot1DMultiLine(sliceDict, whatToPlot, saveResultDir = 'savedResults', which
 		cb = colorbar()
 		cb.set_label('Color variable: ' + seqDimension)
 		
+	if whatToPlot == 'FC':
+		ylim([.5,1])
+		
 	if saveFig != 0:
 		savefig('/Users/Nick/Desktop/fig1.eps')
 	
@@ -279,7 +283,7 @@ def plot1DMultiLine(sliceDict, whatToPlot, saveResultDir = 'savedResults', which
 # This function plots a sequence  of 1-D plots:
 def plot1DSeq(sliceDict, whatToPlot, saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 300, newFigure = 1, quickName = -1, seqLength = 4):
 	from numpy import array, linspace, inf
-	from pylab import figure, subplot, suptitle, subplots_adjust
+	from pylab import figure, subplot, suptitle, subplots_adjust, ylim
 	import copy
 	if quickName == -1:
 		quickName = getLastQuickName(saveResultDir = 'savedResults')
@@ -322,11 +326,13 @@ def plot1DSeq(sliceDict, whatToPlot, saveResultDir = 'savedResults', whichRun = 
 			thisPlot = plot1D(copy.copy(sliceDict), whatToPlot,saveResultDir = saveResultDir, whichRun = whichRun, tDel = tDel, tPen = tPen, tND = tND, quickName = quickName, titleString = titleString, yLims = yLims, newFigure = 0, plotYLabel = 1)
 		else:
 			thisPlot = plot1D(copy.copy(sliceDict), whatToPlot,saveResultDir = saveResultDir, whichRun = whichRun, tDel = tDel, tPen = tPen, tND = tND, quickName = quickName, titleString = titleString, yLims = yLims, newFigure = 0, plotYLabel = 0)	
+		if whatToPlot == 'FC':
+			ylim([.5,1])
 	
 	if whatToPlot == 'RR':
 		suptitle('Reward Rate')
 	elif whatToPlot == 'FC':
-		suptitle('Fraction Correct')	
+		suptitle('Fraction Correct')
 	elif whatToPlot == 'RT':
 		suptitle('Reaction Time')
 		
