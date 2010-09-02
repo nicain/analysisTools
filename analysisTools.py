@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 #  analysisTools.py
 #  Created by nicain on 11/4/09.
 #  Copyright (c) 2009 __MyCompanyName__. All rights reserved.
@@ -548,7 +549,7 @@ def plot1D( sliceDict, whatToPlot,saveResultDir = 'savedResults', whichRun = 0, 
 		CData=array([0,3.2,6.4,12.8,25.6,51.2])
 		FC, RT = getRoitmanPsyChr(inputSet)
 		pl.plot(CData, RT,'o')
-		
+	
 	if yLims != -1:
 		pl.ylim(yLims[0], yLims[1])
 	pl.xlabel(xDimension)
@@ -701,7 +702,7 @@ def listNames(saveResultDir = 'savedResults', N=10):
 	for name in nameTimeListSorted:
 		counter += 1
 		if counter <= N:
-			print '   ' + name[0]
+			print '   ' + name[0] + ', (' + str(getTrials(quickName=name[0])) + ')'
 	return
 
 ################################################################################
@@ -1344,7 +1345,70 @@ def threshRatio(sliceDict,saveResultDir = 'savedResults', whichRun = 0, quickNam
 
 	return HTT, HAT, HTT/HAT
 
+################################################################################
+# Plot 1-d Log plot:
+def plot1DLog(sliceDict, whatToPlot, saveResultDir = 'savedResults', whichRun = 0, quickName = -1, tDel = 2000, tPen = 0, tND=350, newFigure = 1):
 
+	# Import necessary stuff:
+	import pylab as pl
+
+	# Get data:
+	X, Y = export1D(sliceDict, whatToPlot, tND=tND, whichRun=whichRun, quickName=quickName) 
+	
+	print X,Y
+	
+	# Determine if FD or not:
+	inputSet = getSettings(whichRun=whichRun,quickName=quickName)[1]
+	if inputSet == 0:
+		inputSet = 'FR'
+	else:
+		inputSet = 'FD'
+	
+	# Get Psychophysics Data:
+	roitmanFC, roitmanRT = getRoitmanPsyChr(inputSet)
+	roitmanXPrime = pl.log(pl.array([3.2,6.4,12.8,25.6,51.2]))
+	roitmanX = pl.concatenate(([0],roitmanXPrime - (roitmanXPrime[0]-(roitmanXPrime[-1]-roitmanXPrime[-2]))))
+
+	# Plot data, with pooling noise and roitman dots:
+	logXPrime = pl.log(X[1:])
+	logX = pl.concatenate(([0], logXPrime - (roitmanXPrime[0]-(roitmanXPrime[-1]-roitmanXPrime[-2]))))
+
+	if newFigure: pl.figure()
+	pl.plot(logX,Y)
+	if whatToPlot == 'RT':
+		pl.plot(roitmanX, roitmanRT,'o')
+	elif whatToPlot == 'FC':
+		pl.plot(roitmanX, roitmanFC,'o')
+
+	# Set Axes:
+	if whatToPlot == 'FC':
+		XTick = pl.concatenate((pl.array([0]),pl.array([3.2,6.4,12.8,25.6,51.2])))
+		L = min(logX)
+		R = max(logX)
+		M = 1 + 0.05*(1-.5)
+		m = .5 - 0.05*(1-.5)
+		pl.xlim(L,R)
+		pl.ylim(m,M)
+		pl.xticks(roitmanX, XTick)
+		pl.yticks(pl.linspace(.5,1,6))
+		pl.xlabel('Dot Coherence (C)')
+		pl.ylabel('FC')
+	elif whatToPlot == 'RT':
+		XTick = pl.concatenate((pl.array([0]),pl.array([3.2,6.4,12.8,25.6,51.2])))
+		YTicks=[400,600,800,1000]
+		L = min(logX)
+		R = max(logX)
+		m=min(YTicks)
+		M=max(YTicks)
+		pl.xlim(L,R)
+		pl.ylim(m,M)
+		pl.xticks(roitmanX, XTick)
+		pl.yticks(pl.floor(pl.linspace(min(YTicks),max(YTicks),len(YTicks))))
+		pl.xlabel('Dot Coherence (C)')
+		pl.ylabel('RT (ms.)')
+
+
+	return
 
 
 
