@@ -1013,7 +1013,7 @@ def histPlot( sliceDict,saveResultDir = 'savedResults', whichRun = 0, quickName 
 	resultTuple = pickle.load(fIn)
 	myRTData = transpose(atleast_2d(resultTuple[0][hashInd]))
 	if CorI == 'Both':
-		myRTDataPlot = myRTData
+		myRTDataPlot = myRTData + tND
 	elif (CorI == 'C') or (CorI == 'I'):
 		myFCData = transpose(atleast_2d(resultTuple[1][hashInd]))
 		if CorI == 'C':
@@ -1021,7 +1021,7 @@ def histPlot( sliceDict,saveResultDir = 'savedResults', whichRun = 0, quickName 
 		else:
 			targetValue = 0
 		targetIndices = nonzero(myFCData==targetValue)
-		myRTDataPlot = myRTData[targetIndices]
+		myRTDataPlot = myRTData[targetIndices]  + tND
 	else:
 		print 'Unrecognized option for CorI: ' + CorI
 		from sys import exit
@@ -1049,6 +1049,7 @@ def histPlotCICompare(sliceDict,saveResultDir = 'savedResults', whichRun = 0, qu
 
 	# Import necessary functions:
 	import pylab as pl
+	from numpy import mean
 
 	# Gather data:
 	histOutC, myCorrData = histPlot(sliceDict,saveResultDir=saveResultDir,whichRun=whichRun,quickName=quickName,tND=tND,bins=bins,normed=normed,plotsOn=0,center=center,CorI='C')
@@ -1068,6 +1069,10 @@ def histPlotCICompare(sliceDict,saveResultDir = 'savedResults', whichRun = 0, qu
 	if newFigure: pl.figure()
 	pl.bar(corrX,corrY,width=widthC,color='green')
 	pl.bar(iCorrX,iCorrY,width=widthI,color='red')
+	
+	# Print mean of each dist:
+	print 'Mean, correct: ' + str(mean(myCorrData))
+	print 'Mean, incorrect: ' + str(mean(myICorrData))
 	
 	return
 
