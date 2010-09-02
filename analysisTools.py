@@ -4,7 +4,7 @@
 
 ################################################################################
 # This function plots creates a multiline speed accuracy plot:
-def speedAccuracyMultiLine(sliceDict, saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 300, newFigure = 1, quickName = -1, N = 5, colorBar = 1, titleString = -1, lims = -1, plotLabels = 1, color = [], saveFig=0):
+def speedAccuracyMultiLine(sliceDict, saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 350, newFigure = 1, quickName = -1, N = 5, colorBar = 1, titleString = -1, lims = -1, plotLabels = 1, color = [], saveFig=0):
 	from numpy import array, linspace, inf
 	from pylab import figure, subplots_adjust, cm, flipud, pcolor, colorbar, hold, savefig
 	import pylab as pl
@@ -46,7 +46,7 @@ def speedAccuracyMultiLine(sliceDict, saveResultDir = 'savedResults', whichRun =
 			minX = min(thisPlot[0].get_xdata())
 		if max(thisPlot[0].get_xdata()) > maxX:
 			maxX = max(thisPlot[0].get_xdata())
-	pl.close()
+	pl.close(99)
 			
 	if lims == -1:
 		lims = ((minX, maxX),(minY, maxY))
@@ -78,7 +78,7 @@ def speedAccuracyMultiLine(sliceDict, saveResultDir = 'savedResults', whichRun =
 
 ################################################################################
 # This function plots speed accuracy tradeoff function:
-def speedAccuracy(sliceDict, saveResultDir = 'savedResults',tDel = 2000, tPen = 0, tND = 300, whichRun = 0, newFigure = 1, quickName = -1, saveFig=0, plotLabels = 1, color = -1, lims = -1):
+def speedAccuracy(sliceDict, saveResultDir = 'savedResults',tDel = 2000, tPen = 0, tND = 350, whichRun = 0, newFigure = 1, quickName = -1, saveFig=0, plotLabels = 1, color = -1, lims = -1):
 	import pylab as pl
 	from numpy import transpose, shape, squeeze, ndarray, array, mean, exp
 	import copy
@@ -145,7 +145,7 @@ def speedAccuracy(sliceDict, saveResultDir = 'savedResults',tDel = 2000, tPen = 
 
 ################################################################################
 # This function plots a sequence  of 1-D multi plots:
-def plot1DSeqMultiLine(sliceDict, whatToPlot, saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 300, newFigure = 1, quickName = -1, seqLength = 4, N=5, saveFig=0, colorBar=1):
+def plot1DSeqMultiLine(sliceDict, whatToPlot, saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 350, newFigure = 1, quickName = -1, seqLength = 4, N=5, saveFig=0, colorBar=1):
 	from numpy import array, linspace, inf
 	from pylab import figure, subplot, suptitle, subplots_adjust, savefig, ylim
 	import copy
@@ -215,9 +215,9 @@ def plot1DSeqMultiLine(sliceDict, whatToPlot, saveResultDir = 'savedResults', wh
 
 ################################################################################
 # This function plots creates a multiline plot:
-def plot1DMultiLine(sliceDict, whatToPlot, saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 300, newFigure = 1, quickName = -1, N = 5, colorBar = 1, titleString = -1, yLims = -1, plotYLabel = 1, color = [], saveFig=0):
+def plot1DMultiLine(sliceDict, whatToPlot, saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 350, newFigure = 1, quickName = -1, N = 5, colorBar = 1, titleString = -1, yLims = -1, plotYLabel = 1, color = [], saveFig=0):
 	from numpy import array, linspace, inf
-	from pylab import figure, subplots_adjust, cm, flipud, pcolor, colorbar, hold, savefig, ylim
+	from pylab import figure, subplots_adjust, cm, flipud, pcolor, colorbar, hold, savefig, ylim, close
 	import copy
 	if quickName == -1:
 		quickName = getLastQuickName(saveResultDir = 'savedResults')
@@ -275,13 +275,14 @@ def plot1DMultiLine(sliceDict, whatToPlot, saveResultDir = 'savedResults', which
 		
 	if saveFig != 0:
 		savefig('/Users/Nick/Desktop/fig1.eps')
+	close(99)
 	
 	
 	return yLims
 
 ################################################################################
 # This function plots a sequence  of 1-D plots:
-def plot1DSeq(sliceDict, whatToPlot, saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 300, newFigure = 1, quickName = -1, seqLength = 4):
+def plot1DSeq(sliceDict, whatToPlot, saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 350, newFigure = 1, quickName = -1, seqLength = 4):
 	from numpy import array, linspace, inf
 	from pylab import figure, subplot, suptitle, subplots_adjust, ylim
 	import copy
@@ -342,7 +343,7 @@ def plot1DSeq(sliceDict, whatToPlot, saveResultDir = 'savedResults', whichRun = 
 
 ################################################################################
 # This function plots a sequence  of 2-D slices:
-def plot2DSeq(sliceDict, whatToPlot, saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 300, newFigure = 1, colorArray = [], N = 20, quickName = -1, seqLength = 4,  colorBar = 1):
+def plot2DSeq(sliceDict, whatToPlot, saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 350, newFigure = 1, colorArray = [], N = 20, quickName = -1, seqLength = 4,  colorBar = 1):
 	from numpy import array, linspace, inf
 	from pylab import figure, subplot, colorbar, suptitle, subplots_adjust
 	import copy
@@ -405,7 +406,7 @@ def plot2DSeq(sliceDict, whatToPlot, saveResultDir = 'savedResults', whichRun = 
 
 ################################################################################
 # This function plots a 2-D slice:
-def plot2D( sliceDict, whatToPlot,saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 300, newFigure = 1, colorArray = [], N = 20, quickName = -1, colorBar = 1, plotYLabel = 1, titleString = -1):
+def plot2D( sliceDict, whatToPlot,saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 350, newFigure = 1, colorArray = [], N = 20, quickName = -1, colorBar = 1, plotYLabel = 1, titleString = -1):
 	from numpy import transpose, shape, squeeze, array
 	import pylab as pl
 	if quickName == -1:
@@ -473,7 +474,7 @@ def plot2D( sliceDict, whatToPlot,saveResultDir = 'savedResults', whichRun = 0, 
 
 ################################################################################
 # This function plots a 1-D slice:
-def plot1D( sliceDict, whatToPlot,saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 300, quickName = -1, titleString = -1, newFigure = 1, plotYLabel = 1, yLims = -1, color = -1, saveFig=0,):
+def plot1D( sliceDict, whatToPlot,saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 350, quickName = -1, titleString = -1, newFigure = 1, plotYLabel = 1, yLims = -1, color = -1, saveFig=0,):
 	from numpy import transpose, shape, squeeze, ndarray, array, mean, exp
 	import pylab as pl
 	if quickName == -1:
@@ -538,12 +539,12 @@ def plot1D( sliceDict, whatToPlot,saveResultDir = 'savedResults', whichRun = 0, 
 	if FD == 1:
 		inputSet = 'FD'
 	else:
-		inputSet = 'RT'
-	if (whatToPlot == 'FC') and ((xDimension == 'xMean') or (xDimension == 'C') or (xDimension == 'CPre')):
+		inputSet = 'FR'
+	if (whatToPlot == 'FC') and ((xDimension == 'xMean') or (xDimension == 'C') or (xDimension == 'COn') or (xDimension == 'CPre')):
 		CData=array([0,3.2,6.4,12.8,25.6,51.2])
 		FC, RT = getRoitmanPsyChr(inputSet)
 		pl.plot(CData,FC,'o')
-	elif (whatToPlot == 'RT') and ((xDimension == 'xMean') or (xDimension == 'C') or (xDimension == 'CPre')) and (FD == 0):
+	elif (whatToPlot == 'RT') and ((xDimension == 'xMean') or (xDimension == 'C') or (xDimension == 'COn') or (xDimension == 'CPre')) and (FD == 0):
 		CData=array([0,3.2,6.4,12.8,25.6,51.2])
 		FC, RT = getRoitmanPsyChr(inputSet)
 		pl.plot(CData, RT,'o')
@@ -563,7 +564,7 @@ def plot1D( sliceDict, whatToPlot,saveResultDir = 'savedResults', whichRun = 0, 
 	
 ################################################################################
 # This function reduces the dimension of a cube by 1, along a given slice:
-def reduce1D(crossTimeCube, resultCube, dims, varToReduce, vals, sliceVal, tDel = 2000, tPen = 0, tND = 300):
+def reduce1D(crossTimeCube, resultCube, dims, varToReduce, vals, sliceVal, tDel = 2000, tPen = 0, tND = 350):
 
 	if varToReduce == 'theta' and sliceVal == 'Optimize':
 		reduceTuple = reduceThetaOptimize(crossTimeCube, resultCube, dims, tDel = tDel, tPen = tPen, tND = tND)
@@ -652,7 +653,7 @@ def reduceMarginalize(crossTimeCube, resultCube, dims, varToReduce, vals, distri
 	
 ################################################################################
 # This function reduces the Theta dimension through RR optimization:
-def reduceThetaOptimize(crossTimeCube, resultCube, dims, tDel = 2000, tPen = 0, tND = 300):
+def reduceThetaOptimize(crossTimeCube, resultCube, dims, tDel = 2000, tPen = 0, tND = 350):
 	import numpy as np
 	import itertools
 
@@ -884,7 +885,7 @@ def getTrials(quickName = -1, saveResultDir = 'savedResults'):
 ################################################################################
 # This function loads the Roitman Data Set, psychr:
 def getRoitmanPsyChr(inputSet):
-	if inputSet == 'RT':
+	if inputSet == 'FR':
 		psyChrFileName = 'Roitman_data_psychoCronoData.dat'
 	elif inputSet == 'FD':
 		psyChrFileName = 'Roitman_data_psychoCronoDataFD.dat'
@@ -914,7 +915,7 @@ def getRoitmanRTCurve():
 	
 ################################################################################
 # This function exports a 1-D slice:
-def export1D( sliceDict, whatToPlot,saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 300, quickName = -1, titleString = -1, plotYLabel = 1):
+def export1D( sliceDict, whatToPlot,saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 350, quickName = -1, titleString = -1, plotYLabel = 1):
 	from numpy import transpose, shape, squeeze, ndarray, array, mean, exp
 	import pylab as pl, copy
 	if quickName == -1:
@@ -958,7 +959,7 @@ def export1D( sliceDict, whatToPlot,saveResultDir = 'savedResults', whichRun = 0
 
 ################################################################################
 # This function exports a 1-D slice:
-def export1Elem( sliceDict, whatToReturn = 'both',saveResultDir = 'savedResults', whichRun = 0, quickName = -1,tND = 300):
+def export1Elem( sliceDict, whatToReturn = 'both',saveResultDir = 'savedResults', whichRun = 0, quickName = -1,tND = 350):
 	from numpy import transpose, shape, squeeze, ndarray, array, mean, exp
 	import pylab as pl, copy
 	if quickName == -1:
@@ -992,8 +993,8 @@ def export1Elem( sliceDict, whatToReturn = 'both',saveResultDir = 'savedResults'
 
 ################################################################################
 # This function plots a histogram:
-def histPlot( sliceDict,saveResultDir = 'savedResults', whichRun = 0, quickName = -1,tND = 300, bins=10, normed=True, plotsOn = 1,center=1):
-	from numpy import transpose, shape, squeeze, ndarray, array, mean, exp, atleast_2d
+def histPlot( sliceDict,saveResultDir = 'savedResults', whichRun = 0, quickName = -1,tND = 350, bins=20, normed=True, plotsOn = 1,center=1, CorI = 'Both',newFigure=True):
+	from numpy import transpose, shape, squeeze, ndarray, array, mean, exp, atleast_2d, nonzero, mean
 
 	import pylab as pl
 	import pickle
@@ -1011,23 +1012,70 @@ def histPlot( sliceDict,saveResultDir = 'savedResults', whichRun = 0, quickName 
 	fIn = open('./' + saveResultDir + '/' + fileName,'r')
 	resultTuple = pickle.load(fIn)
 	myRTData = transpose(atleast_2d(resultTuple[0][hashInd]))
+	if CorI == 'Both':
+		myRTDataPlot = myRTData
+	elif (CorI == 'C') or (CorI == 'I'):
+		myFCData = transpose(atleast_2d(resultTuple[1][hashInd]))
+		if CorI == 'C':
+			targetValue = 1
+		else:
+			targetValue = 0
+		targetIndices = nonzero(myFCData==targetValue)
+		myRTDataPlot = myRTData[targetIndices]
+	else:
+		print 'Unrecognized option for CorI: ' + CorI
+		from sys import exit
+		exit(1)
 
 	# Center if desired:
 	if center == 1:
-		myRTData = myRTData - np.mean(myRTData)
+		myRTDataPlot = myRTDataPlot - mean(myRTDataPlot)
 	
 	# Plot the histogram:
 	if plotsOn:
-		pl.figure(1)
-		pl.hist(myRTData,bins=bins,normed=normed)
+		if newFigure: pl.figure()
+		else: pl.figure(1).clear()
+		histOut = pl.hist(myRTDataPlot,bins=bins,normed=normed)
+	else:
+		pl.figure(99)
+		histOut = pl.hist(myRTDataPlot,bins=bins,normed=normed)
+		pl.close(99)
 	
-	return myRTData
+	return histOut, myRTDataPlot
+	
+################################################################################
+# This function plots a two histograms, for correct and incorrect results:
+def histPlotCICompare(sliceDict,saveResultDir = 'savedResults', whichRun = 0, quickName = -1,tND = 350, bins=20, normed=True, plotsOn = 1,center=1,newFigure=True):
+
+	# Import necessary functions:
+	import pylab as pl
+
+	# Gather data:
+	histOutC, myCorrData = histPlot(sliceDict,saveResultDir=saveResultDir,whichRun=whichRun,quickName=quickName,tND=tND,bins=bins,normed=normed,plotsOn=0,center=center,CorI='C')
+	histOutI, myICorrData = histPlot(sliceDict,saveResultDir=saveResultDir,whichRun=whichRun,quickName=quickName,tND=tND,bins=bins,normed=normed,plotsOn=0,center=center,CorI='I')
+	
+	# Create plotting data, correct:
+	corrX = histOutC[1][0:-1]
+	widthC = corrX[1]-corrX[0]
+	corrY = histOutC[0]
+	
+	# Create plotting data, incorrect:
+	iCorrX = histOutI[1][0:-1]
+	widthI = iCorrX[1]-iCorrX[0]
+	iCorrY = -1*histOutI[0]
+	
+	# Make the double-plot:
+	if newFigure: pl.figure()
+	pl.bar(corrX,corrY,width=widthC,color='green')
+	pl.bar(iCorrX,iCorrY,width=widthI,color='red')
+	
+	return
 
 ################################################################################
-# This function plots a histogram:
-def histPlotMultiBar(sliceDict,saveResultDir = 'savedResults', whichRun = 0, quickName = -1,tND = 300, bins=10, normed=True, plotsOn = 1,center=1,N=2):
-	from numpy import transpose, shape, squeeze, ndarray, array, mean, exp, atleast_2d, linspace, concatenate
+# This function plots a multi-histogram plot:
+def histPlotMultiBar(sliceDict,saveResultDir = 'savedResults', whichRun = 0, quickName = -1,tND = 350, bins=20, normed=True, plotsOn = 1,center=1,N=2, newFigure=True):
 
+	from numpy import transpose, shape, squeeze, ndarray, array, mean, exp, atleast_2d, linspace, concatenate
 	import pylab as pl
 	import pickle
 	if quickName == -1:
@@ -1071,11 +1119,132 @@ def histPlotMultiBar(sliceDict,saveResultDir = 'savedResults', whichRun = 0, qui
 			myRTData[i] = myRTData[i] - mean(myRTData[i])
 	
 	# Plot the histogram:
+	if newFigure: 
+		pl.figure()
+	else:
+		pl.figure().clear()		
 	if plotsOn:
-		pl.figure(1)
+
 		pl.hist(concatenate(myRTData,axis=1),bins=bins,normed=normed)
 	
 	return myRTData
+	
+	
+################################################################################
+# This function determines error between a slice and data:
+def sliceErr(sliceDict, FRorFD='FR', saveResultDir='savedResults', quickName=-1, whichRun=0, tND=350):
+	
+	# Import packages
+	import copy
+	import numpy as np
+	import pylab as pl
+	
+	# Settings:
+	FCWeight = 0
+	RTWeight = 1
+	
+	# Set x-axis to coherence:
+	sliceDict['XVar'] = 'COn'
+	
+	# Get  data:
+	xValsMonkey = [0,3.2,6.4,12.8,25.6,51.2]
+	if FRorFD == 'FR':
+
+		# Simulation:
+		xVals, FCData = export1D(copy.copy(sliceDict),'FC',saveResultDir=saveResultDir, quickName=quickName, whichRun=whichRun, tND=tND)
+		xVals, RTData = export1D(copy.copy(sliceDict),'RT',saveResultDir=saveResultDir, quickName=quickName, whichRun=whichRun, tND=tND)
+		
+		# Monkey data:
+		FCDataMonkey,RTDataMonkey = getRoitmanPsyChr('FR')
+		
+		# Interpolate simulated data to hit the correct xValsMonkey points:
+		FCDataInterp = np.interp(xValsMonkey, xVals, FCData)
+		RTDataInterp = np.interp(xValsMonkey, xVals, RTData)
+		
+		# Normalize all data sets between 0 and 1, FC:
+		FCDataMonkeyNorm = (FCDataMonkey - np.min(FCDataMonkey))/(np.max(FCDataMonkey) - np.min(FCDataMonkey))
+		FCDataInterpNorm = (FCDataInterp - np.min(FCDataMonkey))/(np.max(FCDataMonkey) - np.min(FCDataMonkey))
+		
+		# Normalize all data sets between 0 and 1, RT:
+		RTDataMonkeyNorm = (RTDataMonkey - np.min(RTDataMonkey))/(np.max(RTDataMonkey) - np.min(RTDataMonkey))
+		RTDataInterpNorm = (RTDataInterp - np.min(RTDataMonkey))/(np.max(RTDataMonkey) - np.min(RTDataMonkey))
+		
+		# Error calculation:
+		errFCAbs = np.sum(np.abs(FCDataInterpNorm - FCDataMonkeyNorm))
+		errFC = np.abs(np.sum(FCDataInterpNorm - FCDataMonkeyNorm))
+		errRTAbs = np.sum(np.abs(RTDataInterpNorm - RTDataMonkeyNorm))
+		errRT = np.abs(np.sum(RTDataInterpNorm - RTDataMonkeyNorm))
+		
+		# Final error:
+		err = FCWeight*(errFCAbs) + RTWeight*(errRTAbs)
+
+	elif FRorFD == 'FD':
+		print 'not done yet'
+	else:
+		print 'unrecoginized option: FRorFD=' + str(FRorFD)
+	
+	return err
+
+################################################################################
+# This function sweeps across noiseSigma and theta, to minimize error:
+def minimizeNoiseTheta(theta = 'Free', noiseSigma = 'Free', betaSigma = 0, chopHat = 0, FRorFD='FR', saveResultDir='savedResults', quickName=-1, whichRun=0, tND=350, saveFig = 0):
+
+	# Import packages:
+	import numpy as np
+	import copy
+	import pylab as pl
+
+	# Settings:
+	if betaSigma == 0:
+		beta = ['Marginalize','Delta',[0]]
+	else:
+		beta = ['Marginalize','Normal',[0,betaSigma]]
+	uniqueString = 'chopHat: '+str(chopHat)+', beta: '+str(beta)
+
+	# Get settings for theta and noisesigma:
+	settingsDict = getSettings(quickName = quickName, saveResultDir = saveResultDir, whichRun = whichRun)[0]
+	if theta == 'Free':
+		thetaVals = settingsDict['theta']
+	else:
+		thetaVals = theta
+	if noiseSigma == 'Free':
+		noiseSigmaVals = settingsDict['noiseSigma']
+	else:
+		noiseSigmaVals = noiseSigma
+	
+	# Get error at each point:
+	sliceDict = {'chopHat':chopHat,'beta':beta}
+	errorMatrix = np.zeros((len(thetaVals),len(noiseSigmaVals)))
+	for i in range(len(thetaVals)):
+		for j in range(len(noiseSigmaVals)):
+			sliceDict['theta'] = thetaVals[i]
+			sliceDict['noiseSigma'] = noiseSigmaVals[j]
+			errorMatrix[i][j]=sliceErr(copy.copy(sliceDict), FRorFD=FRorFD, saveResultDir=saveResultDir, quickName=quickName, whichRun=whichRun, tND=tND)
+
+	# Generate contour plot
+	pl.figure(1).clear()
+	pl.figure(1)
+	pl.contourf(noiseSigmaVals, thetaVals, errorMatrix, 50)
+	pl.title(uniqueString)
+	
+	# Find minimum element:
+	(iMin,jMin)=np.nonzero(errorMatrix==np.min(errorMatrix))
+	bestTheta = thetaVals[iMin]
+	bestNoiseSigma = noiseSigmaVals[jMin]
+	
+	# Plot bet-fitting curves:
+	sliceDict['XVar'] = 'COn'
+	sliceDict['theta'] = bestTheta
+	sliceDict['noiseSigma'] = bestNoiseSigma
+	plot1D(copy.copy(sliceDict), 'FC',saveResultDir =saveResultDir, whichRun =whichRun, tDel = 2000, tPen = 0, tND = tND, quickName = quickName,newFigure = 1)
+	plot1D(copy.copy(sliceDict), 'RT',saveResultDir =saveResultDir, whichRun =whichRun, tDel = 2000, tPen = 0, tND = tND, quickName = quickName,newFigure = 1)
+	
+	if saveFig != 0:
+		pl.figure(1)
+		pl.savefig('/Users/Nick/Desktop/' + uniqueString + '_contour.eps')
+
+	return bestTheta, bestNoiseSigma, errorMatrix
+
 
 
 ################################################################################
@@ -1116,4 +1285,63 @@ def intErfAB(a, b, mu=0, sigma=1):
 	P2 = erf(C2)
 	
 	return .5*(P1-P2)
+
+################################################################################
+# Report the threshold ratio of a given slice:
+def threshRatio(sliceDict,saveResultDir = 'savedResults', whichRun = 0, quickName = -1,tND=350):
+
+	# Import necessary stuff:
+	from copy import copy
+	import numpy as np
+
+
+
+	# Gather relevent data:
+	xVals, FCData = export1D(copy(sliceDict),'FC',saveResultDir=saveResultDir,whichRun=whichRun,tND=tND,quickName=quickName)
+	xVals, RTData = export1D(copy(sliceDict),'RT',saveResultDir=saveResultDir,whichRun=whichRun,tND=tND,quickName=quickName)
 	
+	# Target half-ways in the range of psych/chrono functions:
+	psyTar = .75
+	chrTar = (max(RTData) + min(RTData))/2.0
+	
+	# Set up interpolating functions:
+	def FCInt(x): return np.interp(x, xVals, FCData)
+	def RTInt(x): return np.interp(x, xVals, RTData)
+	
+	# Set up functions for root finding:
+	def FCIntRoot(x): return FCInt(x) - psyTar
+	def RTIntRoot(x): return RTInt(x) - chrTar
+	
+	# Quick and dirty bisection method:
+	def bisection(f,lb,ub):
+
+		# Settings:
+		eps = .001
+		lb = float(lb)
+		ub = float(ub)
+
+		# Bisection method:
+		while (abs(ub - lb) > 2*eps):
+			mid = (ub + lb)/2
+			if ((f(lb)*f(mid)) < 0):
+				ub = mid
+			elif ((f(ub)*f(mid)) < 0):
+				lb = mid
+			else:
+				break
+		return mid
+	
+	# Compute halfway-time-threshold (HTT) and halfway-accuracy-threshold (HAT)
+	lb = min(xVals)
+	ub = max(xVals)
+	HAT = bisection(FCIntRoot,lb,ub)
+	HTT = bisection(RTIntRoot,lb,ub)
+
+	return HTT, HAT, HTT/HAT
+
+
+
+
+
+
+
