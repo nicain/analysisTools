@@ -1146,8 +1146,8 @@ def sliceErr(sliceDict, FRorFD='FR', saveResultDir='savedResults', quickName=-1,
 	import pylab as pl
 	
 	# Settings:
-	FCWeight = 0
-	RTWeight = 1
+	FCWeight = 1
+	RTWeight = 0
 	
 	# Set x-axis to coherence:
 	sliceDict['XVar'] = 'COn'
@@ -1238,7 +1238,7 @@ def minimizeNoiseTheta(theta = 'Free', noiseSigma = 'Free', betaSigma = 0, chopH
 	bestTheta = thetaVals[iMin]
 	bestNoiseSigma = noiseSigmaVals[jMin]
 	
-	# Plot bet-fitting curves:
+	# Plot best-fitting curves:
 	sliceDict['XVar'] = 'COn'
 	sliceDict['theta'] = bestTheta
 	sliceDict['noiseSigma'] = bestNoiseSigma
@@ -1351,61 +1351,69 @@ def plot1DLog(sliceDict, whatToPlot, saveResultDir = 'savedResults', whichRun = 
 
 	# Import necessary stuff:
 	import pylab as pl
+	from copy import copy
 
-	# Get data:
-	X, Y = export1D(sliceDict, whatToPlot, tND=tND, whichRun=whichRun, quickName=quickName) 
-	
-	print X,Y
-	
-	# Determine if FD or not:
-	inputSet = getSettings(whichRun=whichRun,quickName=quickName)[1]
-	if inputSet == 0:
-		inputSet = 'FR'
+	if whatToPlot == 'Both':
+		plot1DLog(copy(sliceDict),'FC',saveResultDir=saveResultDir,whichRun=whichRun,quickName=quickName,tDel=tDel,tPen=tPen,tND=tND,newFigure = 1)
+		plot1DLog(copy(sliceDict),'RT',saveResultDir=saveResultDir,whichRun=whichRun,quickName=quickName,tDel=tDel,tPen=tPen,tND=tND,newFigure = 1)
 	else:
-		inputSet = 'FD'
-	
-	# Get Psychophysics Data:
-	roitmanFC, roitmanRT = getRoitmanPsyChr(inputSet)
-	roitmanXPrime = pl.log(pl.array([3.2,6.4,12.8,25.6,51.2]))
-	roitmanX = pl.concatenate(([0],roitmanXPrime - (roitmanXPrime[0]-(roitmanXPrime[-1]-roitmanXPrime[-2]))))
 
-	# Plot data, with pooling noise and roitman dots:
-	logXPrime = pl.log(X[1:])
-	logX = pl.concatenate(([0], logXPrime - (roitmanXPrime[0]-(roitmanXPrime[-1]-roitmanXPrime[-2]))))
 
-	if newFigure: pl.figure()
-	pl.plot(logX,Y)
-	if whatToPlot == 'RT':
-		pl.plot(roitmanX, roitmanRT,'o')
-	elif whatToPlot == 'FC':
-		pl.plot(roitmanX, roitmanFC,'o')
 
-	# Set Axes:
-	if whatToPlot == 'FC':
-		XTick = pl.concatenate((pl.array([0]),pl.array([3.2,6.4,12.8,25.6,51.2])))
-		L = min(logX)
-		R = max(logX)
-		M = 1 + 0.05*(1-.5)
-		m = .5 - 0.05*(1-.5)
-		pl.xlim(L,R)
-		pl.ylim(m,M)
-		pl.xticks(roitmanX, XTick)
-		pl.yticks(pl.linspace(.5,1,6))
-		pl.xlabel('Dot Coherence (C)')
-		pl.ylabel('FC')
-	elif whatToPlot == 'RT':
-		XTick = pl.concatenate((pl.array([0]),pl.array([3.2,6.4,12.8,25.6,51.2])))
-		YTicks=[400,600,800,1000]
-		L = min(logX)
-		R = max(logX)
-		m=min(YTicks)
-		M=max(YTicks)
-		pl.xlim(L,R)
-		pl.ylim(m,M)
-		pl.xticks(roitmanX, XTick)
-		pl.yticks(pl.floor(pl.linspace(min(YTicks),max(YTicks),len(YTicks))))
-		pl.xlabel('Dot Coherence (C)')
-		pl.ylabel('RT (ms.)')
+		# Get data:
+		X, Y = export1D(sliceDict, whatToPlot, tND=tND, whichRun=whichRun, quickName=quickName) 
+		
+		print X,Y
+		
+		# Determine if FD or not:
+		inputSet = getSettings(whichRun=whichRun,quickName=quickName)[1]
+		if inputSet == 0:
+			inputSet = 'FR'
+		else:
+			inputSet = 'FD'
+		
+		# Get Psychophysics Data:
+		roitmanFC, roitmanRT = getRoitmanPsyChr(inputSet)
+		roitmanXPrime = pl.log(pl.array([3.2,6.4,12.8,25.6,51.2]))
+		roitmanX = pl.concatenate(([0],roitmanXPrime - (roitmanXPrime[0]-(roitmanXPrime[-1]-roitmanXPrime[-2]))))
+
+		# Plot data, with pooling noise and roitman dots:
+		logXPrime = pl.log(X[1:])
+		logX = pl.concatenate(([0], logXPrime - (roitmanXPrime[0]-(roitmanXPrime[-1]-roitmanXPrime[-2]))))
+
+		if newFigure: pl.figure()
+		pl.plot(logX,Y)
+		if whatToPlot == 'RT':
+			pl.plot(roitmanX, roitmanRT,'o')
+		elif whatToPlot == 'FC':
+			pl.plot(roitmanX, roitmanFC,'o')
+
+		# Set Axes:
+		if whatToPlot == 'FC':
+			XTick = pl.concatenate((pl.array([0]),pl.array([3.2,6.4,12.8,25.6,51.2])))
+			L = min(logX)
+			R = max(logX)
+			M = 1 + 0.05*(1-.5)
+			m = .5 - 0.05*(1-.5)
+			pl.xlim(L,R)
+			pl.ylim(m,M)
+			pl.xticks(roitmanX, XTick)
+			pl.yticks(pl.linspace(.5,1,6))
+			pl.xlabel('Dot Coherence (C)')
+			pl.ylabel('FC')
+		elif whatToPlot == 'RT':
+			XTick = pl.concatenate((pl.array([0]),pl.array([3.2,6.4,12.8,25.6,51.2])))
+			YTicks=[400,600,800,1000]
+			L = min(logX)
+			R = max(logX)
+			m=min(YTicks)
+			M=max(YTicks)
+			pl.xlim(L,R)
+			pl.ylim(m,M)
+			pl.xticks(roitmanX, XTick)
+			pl.yticks(pl.floor(pl.linspace(min(YTicks),max(YTicks),len(YTicks))))
+			pl.xlabel('Dot Coherence (C)')
+			pl.ylabel('RT (ms.)')
 
 
 	return
