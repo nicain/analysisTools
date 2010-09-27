@@ -5,13 +5,13 @@
 
 ################################################################################
 # This function plots creates a multiline speed accuracy plot:
-def speedAccuracyMultiLine(sliceDict, saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 350, newFigure = 1, quickName = -1, N = 5, colorBar = 1, titleString = -1, lims = -1, plotLabels = 1, color = [], saveFig=0):
+def speedAccuracyMultiLine(sliceDict, saveResultDir = './savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 350, newFigure = 1, quickName = -1, N = 5, colorBar = 1, titleString = -1, lims = -1, plotLabels = 1, color = [], saveFig=0):
 	from numpy import array, linspace, inf
 	from pylab import figure, subplots_adjust, cm, flipud, pcolor, colorbar, hold, savefig
 	import pylab as pl
 	import copy
 	if quickName == -1:
-		quickName = getLastQuickName(saveResultDir = 'savedResults')
+		quickName = getLastQuickName(saveResultDir = './savedResults')
 
 	seqDimensionTuple = sliceDict['MultiLineVar']
 	if isinstance(seqDimensionTuple, str):
@@ -75,21 +75,70 @@ def speedAccuracyMultiLine(sliceDict, saveResultDir = 'savedResults', whichRun =
 		savefig('/Users/Nick/Desktop/fig1.eps')
 	
 	
+
 	return lims
 
 ################################################################################
 # This function plots speed accuracy tradeoff function:
-def speedAccuracy(sliceDict, saveResultDir = 'savedResults',tDel = 2000, tPen = 0, tND = 350, whichRun = 0, newFigure = 1, quickName = -1, saveFig=0, plotLabels = 1, color = -1, lims = -1):
+def speedAccuracy(sliceDict, saveResultDir = './savedResults',tDel = 2000, tPen = 0, tND = 350, whichRun = 0, newFigure = 1, quickName = -1, saveFig=0, plotLabels = 1, color = -1, lims = -1,pade=0, makePlot=1, thetaN = 'Default'):
 	import pylab as pl
 	from numpy import transpose, shape, squeeze, ndarray, array, mean, exp
 	import copy
 
+	# Import necessary stuff for pade approx:
+	import scipy as sp
+	from scipy.optimize import leastsq
+	from random import random as r
+	
+	# Define stuff for Pade:
+	maxRecursion = 15
+	tol=.15
+
+	#---------------------------------------------------------------------------
+	def padeApproxOfY(x,y, N='Default', level=maxRecursion):
+		
+		# Escape condition:
+		if level == 0:
+			print 'Max Level Reached.  Utter Failure!'
+			return 1,1
+			
+		# Interpret length of x-vals being returned:
+		if N == 'Default':
+			N=len(x)
+		
+		# Set up functions:
+		def res(p,y,x): return y-peval(x,p)
+		def peval(x,p): return ((p[0]+p[1]*x+p[2]*x**2+p[3]*x**3+p[4]*x**4)/
+									(p[5]+p[6]*x+p[7]*x**2+p[8]*x**3+p[9]*x**4))
+		
+		# Optimize:
+		if level == maxRecursion:
+			p0=[1,1,1,1,1,1,1,1,1,1]
+		elif level == maxRecursion-1:
+			p0=[317.41537167, -1146.79958272, 1695.42313448, 715.40164079, 79.73275651,
+			    462.86872028, -1719.11197335, 2601.63857965, 839.88221669, 90.31055117]
+		else:
+			p0 = [r(),r(),r(),r(),r(),r(),r(),r(),r(),r()]
+		plsq = leastsq(res, p0, args=(y,transpose(x)),maxfev=5000)
+		print plsq[0]
+		
+		# Return interpolated values:
+		def f(x): return peval(array(x),plsq[0])
+		newX = sp.linspace(min(x),max(x),N)
+		smoothY = f(newX)
+		
+		if (plsq[1] != 1) or (pl.linalg.norm(y/max(y)-f(x)/max(f(x))) > tol):
+			newLevel = level-1
+			newX, smoothY = padeApproxOfY(x,y, N=N, level=newLevel)
+		
+		return newX, smoothY
+	#---------------------------------------------------------------------------
 
 	if quickName == -1:
-		quickName = getLastQuickName(saveResultDir = 'savedResults')
+		quickName = getLastQuickName(saveResultDir = './savedResults')
 	
 	# Get data:
-	crossTimeData, resultData, dims, settings, FD, numberOfJobs, gitVersion =  getDataAndSettings(quickName, saveResultDir, whichRun)
+	crossTimeData, resultData, dims, settings, FD, numberOfJobs, gitVersion =  getDataAndSettings(quickName=quickName, saveResultDir=saveResultDir, whichRun=whichRun)
 	crossTimeData += tND 
     
 	# Reorder dimension list and cube to put theta variable last:
@@ -118,40 +167,60 @@ def speedAccuracy(sliceDict, saveResultDir = 'savedResults',tDel = 2000, tPen = 
 		counter += 1
 		# Get data:
 		X[counter], Y[counter] = (export1D(copy.copy(sliceDict), yAxis, whichRun=whichRun, 
-					  quickName=quickName))
-	myRT, myFC = Y[0],Y[1]
+					  quickName=quickName, saveResultDir=saveResultDir))
 	
-	if newFigure:
-		pl.figure()
-	
-	if not(isinstance(color,ndarray)):
-		myPlot = pl.plot(myRT,myFC)
-	else:
-		myPlot = pl.plot(myRT,myFC, color = color)
+	if pade:
+		if thetaN == 'Default':
+			thetaN=len(X[0])
+		thetaVals, myRT = padeApproxOfY(X[0],Y[0], N=thetaN)
+		pl.figure(201)
+		pl.plot(thetaVals, myRT)
+		pl.plot(X[0],Y[0])
 
-	if lims != -1:
-		pl.xlim(lims[0][0], lims[0][1])
-		pl.ylim(lims[1][0], lims[1][1])
+		thetaVals, myFC = padeApproxOfY(X[1],Y[1], N=thetaN)
+		pl.figure(202)
+		pl.plot(thetaVals, myFC)
+		pl.plot(X[1],Y[1])
+	else:
+		myRT, myFC = Y[0],Y[1]
+		thetaVals = X[0]
+
+
+	
+	if makePlot == 1:
+		if newFigure:
+			pl.figure()
 		
-	if plotLabels == 1:
-		pl.xlabel('RT')
-		pl.ylabel('FC')
+		if not(isinstance(color,ndarray)):
+			myPlot = pl.plot(myRT,myFC)
+			if pade:
+				pl.plot(Y[0],Y[1])
+		else:
+			myPlot = pl.plot(myRT,myFC, color = color)
+
+		if lims != -1:
+			pl.xlim(lims[0][0], lims[0][1])
+			pl.ylim(lims[1][0], lims[1][1])
+			
+		if plotLabels == 1:
+			pl.xlabel('RT')
+			pl.ylabel('FC')
+		
+		if saveFig != 0:
+			pl.savefig('/Users/Nick/Desktop/fig1.eps')
 	
-	if saveFig != 0:
-		pl.savefig('/Users/Nick/Desktop/fig1.eps')
-	
-	return myPlot
+	return thetaVals,myRT,myFC
 
 
 
 ################################################################################
 # This function plots a sequence  of 1-D multi plots:
-def plot1DSeqMultiLine(sliceDict, whatToPlot, saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 350, newFigure = 1, quickName = -1, seqLength = 4, N=5, saveFig=0, colorBar=1):
+def plot1DSeqMultiLine(sliceDict, whatToPlot, saveResultDir = './savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 350, newFigure = 1, quickName = -1, seqLength = 4, N=5, saveFig=0, colorBar=1):
 	from numpy import array, linspace, inf
 	from pylab import figure, subplot, suptitle, subplots_adjust, savefig, ylim
 	import copy
 	if quickName == -1:
-		quickName = getLastQuickName(saveResultDir = 'savedResults')
+		quickName = getLastQuickName(saveResultDir = './savedResults')
 	if whatToPlot == 'All':
 		plot1DSeqMultiLine(copy.copy(sliceDict), 'RR', saveResultDir = saveResultDir, whichRun = whichRun, tDel = tDel, tPen = tPen, tND = tND, newFigure = newFigure, quickName = quickName, seqLength = seqLength, N = N)
 		plot1DSeqMultiLine(copy.copy(sliceDict), 'RT', saveResultDir = saveResultDir, whichRun = whichRun, tDel = tDel, tPen = tPen, tND = tND, newFigure = newFigure, quickName = quickName, seqLength = seqLength, N = N)
@@ -216,12 +285,12 @@ def plot1DSeqMultiLine(sliceDict, whatToPlot, saveResultDir = 'savedResults', wh
 
 ################################################################################
 # This function plots creates a multiline plot:
-def plot1DMultiLine(sliceDict, whatToPlot, saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 350, newFigure = 1, quickName = -1, N = 5, colorBar = 1, titleString = -1, yLims = -1, plotYLabel = 1, color = [], saveFig=0):
+def plot1DMultiLine(sliceDict, whatToPlot, saveResultDir = './savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 350, newFigure = 1, quickName = -1, N = 5, colorBar = 1, titleString = -1, yLims = -1, plotYLabel = 1, color = [], saveFig=0):
 	from numpy import array, linspace, inf
 	from pylab import figure, subplots_adjust, cm, flipud, pcolor, colorbar, hold, savefig, ylim, close
 	import copy
 	if quickName == -1:
-		quickName = getLastQuickName(saveResultDir = 'savedResults')
+		quickName = getLastQuickName(saveResultDir = './savedResults')
 	if whatToPlot == 'All':
 		plot1DMultiLine(copy.copy(sliceDict), 'RR', saveResultDir = saveResultDir, whichRun = whichRun, tDel = tDel, tPen = tPen, tND = tND, newFigure = newFigure, quickName = quickName, N = N, colorBar = colorBar, titleString = titleString, yLims = yLims, plotYLabel = plotYLabel, color = color)
 		plot1DMultiLine(copy.copy(sliceDict), 'RT', saveResultDir = saveResultDir, whichRun = whichRun, tDel = tDel, tPen = tPen, tND = tND, newFigure = newFigure, quickName = quickName, N = N, colorBar = colorBar, titleString = titleString, yLims = yLims, plotYLabel = plotYLabel, color = color)
@@ -283,12 +352,12 @@ def plot1DMultiLine(sliceDict, whatToPlot, saveResultDir = 'savedResults', which
 
 ################################################################################
 # This function plots a sequence  of 1-D plots:
-def plot1DSeq(sliceDict, whatToPlot, saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 350, newFigure = 1, quickName = -1, seqLength = 4):
+def plot1DSeq(sliceDict, whatToPlot, saveResultDir = './savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 350, newFigure = 1, quickName = -1, seqLength = 4):
 	from numpy import array, linspace, inf
 	from pylab import figure, subplot, suptitle, subplots_adjust, ylim
 	import copy
 	if quickName == -1:
-		quickName = getLastQuickName(saveResultDir = 'savedResults')
+		quickName = getLastQuickName(saveResultDir = './savedResults')
 
 	seqDimensionTuple = sliceDict['SeqVar']
 	if isinstance(seqDimensionTuple, str):
@@ -344,12 +413,12 @@ def plot1DSeq(sliceDict, whatToPlot, saveResultDir = 'savedResults', whichRun = 
 
 ################################################################################
 # This function plots a sequence  of 2-D slices:
-def plot2DSeq(sliceDict, whatToPlot, saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 350, newFigure = 1, colorArray = [], N = 20, quickName = -1, seqLength = 4,  colorBar = 1):
+def plot2DSeq(sliceDict, whatToPlot, saveResultDir = './savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 350, newFigure = 1, colorArray = [], N = 20, quickName = -1, seqLength = 4,  colorBar = 1):
 	from numpy import array, linspace, inf
 	from pylab import figure, subplot, colorbar, suptitle, subplots_adjust
 	import copy
 	if quickName == -1:
-		quickName = getLastQuickName(saveResultDir = 'savedResults')
+		quickName = getLastQuickName(saveResultDir = './savedResults')
 
 	seqDimensionTuple = sliceDict['SeqVar']
 	if isinstance(seqDimensionTuple, str):
@@ -407,11 +476,11 @@ def plot2DSeq(sliceDict, whatToPlot, saveResultDir = 'savedResults', whichRun = 
 
 ################################################################################
 # This function plots a 2-D slice:
-def plot2D( sliceDict, whatToPlot,saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 350, newFigure = 1, colorArray = [], N = 20, quickName = -1, colorBar = 1, plotYLabel = 1, titleString = -1):
+def plot2D( sliceDict, whatToPlot,saveResultDir = './savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 350, newFigure = 1, colorArray = [], N = 20, quickName = -1, colorBar = 1, plotYLabel = 1, titleString = -1):
 	from numpy import transpose, shape, squeeze, array
 	import pylab as pl
 	if quickName == -1:
-		quickName = getLastQuickName(saveResultDir = 'savedResults')
+		quickName = getLastQuickName(saveResultDir = './savedResults')
 
 	# Get data:
 	crossTimeData, resultData, dims, settings, FD, numberOfJobs, gitVersion =  getDataAndSettings(quickName, saveResultDir, whichRun)
@@ -475,11 +544,11 @@ def plot2D( sliceDict, whatToPlot,saveResultDir = 'savedResults', whichRun = 0, 
 
 ################################################################################
 # This function plots a 1-D slice:
-def plot1D( sliceDict, whatToPlot,saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 350, quickName = -1, titleString = -1, newFigure = 1, plotYLabel = 1, yLims = -1, color = -1, saveFig=0,):
+def plot1D( sliceDict, whatToPlot,saveResultDir = './savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 350, quickName = -1, titleString = -1, newFigure = 1, plotYLabel = 1, yLims = -1, color = -1, saveFig=0,):
 	from numpy import transpose, shape, squeeze, ndarray, array, mean, exp
 	import pylab as pl
 	if quickName == -1:
-		quickName = getLastQuickName(saveResultDir = 'savedResults')
+		quickName = getLastQuickName(saveResultDir = './savedResults')
 
 	# Get data:
 	crossTimeData, resultData, dims, settings, FD, numberOfJobs, gitVersion =  getDataAndSettings(quickName, saveResultDir, whichRun)
@@ -561,7 +630,7 @@ def plot1D( sliceDict, whatToPlot,saveResultDir = 'savedResults', whichRun = 0, 
 	if saveFig != 0:
 		pl.savefig('/Users/Nick/Desktop/fig1.eps')
 	
-	return myPlot
+	return myPlot#xVals,depVar
 	
 ################################################################################
 # This function reduces the dimension of a cube by 1, along a given slice:
@@ -689,7 +758,7 @@ def reduceThetaOptimize(crossTimeCube, resultCube, dims, tDel = 2000, tPen = 0, 
 
 ################################################################################
 # This function lists the job names that are available:
-def listNames(saveResultDir = 'savedResults', N=10):
+def listNames(saveResultDir = './savedResults', N=10):
 
 	import operator
 	nameDict = quickNameIDDictionary(saveResultDir,includeRepeats = 0)
@@ -707,10 +776,10 @@ def listNames(saveResultDir = 'savedResults', N=10):
 
 ################################################################################
 # This function prints out a nicely formatted settings string:
-def printSettings(quickName = -1, saveResultDir = 'savedResults', whichRun = 0):
+def printSettings(quickName = -1, saveResultDir = './savedResults', whichRun = 0):
 
 	if quickName == -1:
-		quickName = getLastQuickName(saveResultDir = 'savedResults')
+		quickName = getLastQuickName(saveResultDir = './savedResults')
 
 	printString = getSettingsString(quickName, saveResultDir = saveResultDir, whichRun = whichRun)
 	print printString
@@ -718,9 +787,9 @@ def printSettings(quickName = -1, saveResultDir = 'savedResults', whichRun = 0):
 
 ################################################################################
 # This function gets the settings string from a file:
-def getSettingsString(quickName = -1, saveResultDir = 'savedResults', whichRun = 0):
+def getSettingsString(quickName = -1, saveResultDir = './savedResults', whichRun = 0):
 	if quickName == -1:
-		quickName = getLastQuickName(saveResultDir = 'savedResults')
+		quickName = getLastQuickName(saveResultDir = './savedResults')
 
 	settings, FD, numberOfJobs, gitVersion = getSettings(quickName, saveResultDir, whichRun=whichRun)
 	params = settings.keys()
@@ -757,7 +826,7 @@ def getSettingsString(quickName = -1, saveResultDir = 'savedResults', whichRun =
 
 ################################################################################
 # This function gets the name of a file, given an ID:
-def getFileString(ID, typeOfFile,  saveResultDir = 'savedResults'):
+def getFileString(ID, typeOfFile,  saveResultDir = './savedResults'):
 
 	resultDict = IDquickNameDictionary(saveResultDir)
 	quickName = resultDict[ID]
@@ -766,47 +835,47 @@ def getFileString(ID, typeOfFile,  saveResultDir = 'savedResults'):
 
 ################################################################################
 # This function grabs the data for a given quickName:
-def getData(quickName = -1, saveResultDir = 'savedResults', whichRun = 0):
+def getData(quickName = -1, saveResultDir = './savedResults', whichRun = 0):
 	import pickle
 	if quickName == -1:
-		quickName = getLastQuickName(saveResultDir = 'savedResults')
+		quickName = getLastQuickName(saveResultDir = './savedResults')
 	
-	ID = quickNameToID(quickName, saveResultDir, whichRun=whichRun)
+	ID = quickNameToID(quickName=quickName, saveResultDir=saveResultDir, whichRun=whichRun)
 	fileName = getFileString(ID,'dat', saveResultDir)
-	fIn = open('./' + saveResultDir + '/' + fileName,'r')
+	fIn = open(saveResultDir + '/' + fileName,'r')
 	resultTuple = pickle.load(fIn)
 	return resultTuple
 
 ################################################################################
 # This function grabs the settings for a given quickName:
-def getSettings(quickName = -1, saveResultDir = 'savedResults', whichRun = 0):
+def getSettings(quickName = -1, saveResultDir = './savedResults', whichRun = 0):
 	import pickle
 	if quickName == -1:
-		quickName = getLastQuickName(saveResultDir = 'savedResults')
+		quickName = getLastQuickName(saveResultDir = './savedResults')
 		
-	ID = quickNameToID(quickName, saveResultDir, whichRun = whichRun)
+	ID = quickNameToID(quickName=quickName, saveResultDir=saveResultDir, whichRun = whichRun)
 	fileName = getFileString(ID,'settings', saveResultDir)
-	fIn = open('./' + saveResultDir + '/' + fileName,'r')
+	fIn = open(saveResultDir + '/' + fileName,'r')
 	resultTuple = pickle.load(fIn)
 	return resultTuple
 
 ################################################################################
 # This function grabs the results and settings for a given quickName:
-def getDataAndSettings(quickName = -1, saveResultDir = 'savedResults', whichRun = 0):
+def getDataAndSettings(quickName = -1, saveResultDir = './savedResults', whichRun = 0):
 	if quickName == -1:
-		quickName = getLastQuickName(saveResultDir = 'savedResults')
+		quickName = getLastQuickName(saveResultDir = './savedResults')
 	
-	crossTimeData, resultData, dims = getData(quickName, saveResultDir, whichRun)
+	crossTimeData, resultData, dims = getData(quickName=quickName, saveResultDir=saveResultDir, whichRun=whichRun)
 	settings, FD, numberOfJobs, gitVersion = getSettings(quickName, saveResultDir, whichRun=whichRun)
 	return (crossTimeData, resultData, dims, settings, FD, numberOfJobs, gitVersion)
 	
 ################################################################################
 # This function creates a dictionary between file "ID's" and quickNames
-def IDquickNameDictionary(saveResultDir = 'savedResults'):
+def IDquickNameDictionary(saveResultDir = './savedResults'):
 	import pickle, os, operator
 	
 	resultDict = {}
-	for root, dirs, files in os.walk('./' + saveResultDir):
+	for root, dirs, files in os.walk(saveResultDir):
 		for name in files:
 			if len(name.split('.')) > 1 and len(name.split('.')) < 3:
 				quickNameAndID,suffix = name.split('.')
@@ -817,11 +886,11 @@ def IDquickNameDictionary(saveResultDir = 'savedResults'):
 
 ################################################################################
 # This function creates a dictionary between "quickNames" and file ID's
-def quickNameIDDictionary(saveResultDir = 'savedResults',includeRepeats = 0):
+def quickNameIDDictionary(saveResultDir = './savedResults',includeRepeats = 0):
 	import pickle, os, operator
 	
 	resultDict = {}
-	for root, dirs, files in os.walk('./' + saveResultDir):
+	for root, dirs, files in os.walk(os.path.abspath(saveResultDir)):
 		for name in files:
 			if len(name.split('.')) > 1 and len(name.split('.')) < 3:
 				quickNameAndID,suffix = name.split('.')
@@ -846,12 +915,12 @@ def quickNameIDDictionary(saveResultDir = 'savedResults',includeRepeats = 0):
 
 ################################################################################
 # This function grabs the ID for a given quickName:
-def quickNameToID(quickName = -1, saveResultDir = 'savedResults', whichRun = 0):
+def quickNameToID(quickName = -1, saveResultDir = './savedResults', whichRun = 0):
 	import operator
 	if quickName == -1:
-		quickName = getLastQuickName(saveResultDir = 'savedResults')
+		quickName = getLastQuickName(saveResultDir = './savedResults')
 
-	currentDict = quickNameIDDictionary(saveResultDir, includeRepeats = 1)
+	currentDict = quickNameIDDictionary(saveResultDir=saveResultDir, includeRepeats = 1)
 	try: listOfIDTimeTuple = currentDict[quickName]
 	except KeyError: 
 		print '  Job "' + quickName + '" not found.'
@@ -863,11 +932,11 @@ def quickNameToID(quickName = -1, saveResultDir = 'savedResults', whichRun = 0):
 		
 ################################################################################
 # This function gets the most recent quickname:
-def getLastQuickName(saveResultDir = 'savedResults'):
+def getLastQuickName(saveResultDir = './savedResults'):
 	import operator
 	
-	d = quickNameIDDictionary()
-	d2 = IDquickNameDictionary() 
+	d = quickNameIDDictionary(saveResultDir=saveResultDir)
+	d2 = IDquickNameDictionary(saveResultDir=saveResultDir) 
 	myIndex = [d[key][0] for key in iter(d)]
 	myIndexSorted = sorted(myIndex, key=operator.itemgetter(1))
 	IDName = myIndexSorted[-1][0]
@@ -876,9 +945,9 @@ def getLastQuickName(saveResultDir = 'savedResults'):
 	
 ################################################################################
 # This function gets the number of trials for a given quickname:
-def getTrials(quickName = -1, saveResultDir = 'savedResults'):
+def getTrials(quickName = -1, saveResultDir = './savedResults'):
 	if quickName == -1:
-		quickName = getLastQuickName(saveResultDir = 'savedResults')
+		quickName = getLastQuickName(saveResultDir = './savedResults')
 		
 	d = quickNameIDDictionary(saveResultDir = saveResultDir, includeRepeats = 1)
 	return len(d[quickName])
@@ -886,12 +955,16 @@ def getTrials(quickName = -1, saveResultDir = 'savedResults'):
 ################################################################################
 # This function loads the Roitman Data Set, psychr:
 def getRoitmanPsyChr(inputSet):
+
+	import os
+	dataSetDir = '/Users/Nick/Desktop/currentProjects/DDMCubeTeragrid/'
+
 	if inputSet == 'FR':
 		psyChrFileName = 'Roitman_data_psychoCronoData.dat'
 	elif inputSet == 'FD':
 		psyChrFileName = 'Roitman_data_psychoCronoDataFD.dat'
 	
-	f = open(psyChrFileName, 'r')
+	f = open(os.path.join(dataSetDir,psyChrFileName), 'r')
 	FC = [0]*6
 	RT = [0]*6
 	counter = -1
@@ -916,14 +989,14 @@ def getRoitmanRTCurve():
 	
 ################################################################################
 # This function exports a 1-D slice:
-def export1D( sliceDict, whatToPlot,saveResultDir = 'savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 350, quickName = -1, titleString = -1, plotYLabel = 1):
+def export1D( sliceDict, whatToPlot,saveResultDir = './savedResults', whichRun = 0, tDel = 2000, tPen = 0, tND = 350, quickName = -1, titleString = -1, plotYLabel = 1):
 	from numpy import transpose, shape, squeeze, ndarray, array, mean, exp
 	import pylab as pl, copy
 	if quickName == -1:
-		quickName = getLastQuickName(saveResultDir = 'savedResults')
+		quickName = getLastQuickName(saveResultDir = './savedResults')
 
 	# Get data:
-	crossTimeData, resultData, dims, settings, FD, numberOfJobs, gitVersion =  getDataAndSettings(quickName, saveResultDir, whichRun)
+	crossTimeData, resultData, dims, settings, FD, numberOfJobs, gitVersion =  getDataAndSettings(quickName=quickName, saveResultDir=saveResultDir, whichRun=whichRun)
 	crossTimeData += tND 
 	
 	# Record variable to plot, and then strip input dictionary of that variable:
@@ -949,7 +1022,7 @@ def export1D( sliceDict, whatToPlot,saveResultDir = 'savedResults', whichRun = 0
 	# Create x-axis values, and plot data:
 	xVals = settings[xDimension]
 	if whatToPlot == 'RR':
-		depVar = 1000*resultSlice/(crossTimeSlice + tND + tDel + (1-resultSlice)*tPen)
+		depVar = 1000*resultSlice/(crossTimeSlice + 0 + tDel + (1-resultSlice)*tPen)
 	elif whatToPlot == 'RT':
 		depVar = crossTimeSlice
 	elif whatToPlot == 'FC':
@@ -960,11 +1033,11 @@ def export1D( sliceDict, whatToPlot,saveResultDir = 'savedResults', whichRun = 0
 
 ################################################################################
 # This function exports a 1-D slice:
-def export1Elem( sliceDict, whatToReturn = 'both',saveResultDir = 'savedResults', whichRun = 0, quickName = -1,tND = 350):
+def export1Elem( sliceDict, whatToReturn = 'both',saveResultDir = './savedResults', whichRun = 0, quickName = -1,tND = 350):
 	from numpy import transpose, shape, squeeze, ndarray, array, mean, exp
 	import pylab as pl, copy
 	if quickName == -1:
-		quickName = getLastQuickName(saveResultDir = 'savedResults')
+		quickName = getLastQuickName(saveResultDir = './savedResults')
 
 	# Get data:
 	crossTimeData, resultData, dims, settings, FD, numberOfJobs, gitVersion =  getDataAndSettings(quickName, saveResultDir, whichRun)
@@ -994,23 +1067,23 @@ def export1Elem( sliceDict, whatToReturn = 'both',saveResultDir = 'savedResults'
 
 ################################################################################
 # This function plots a histogram:
-def histPlot( sliceDict,saveResultDir = 'savedResults', whichRun = 0, quickName = -1,tND = 350, bins=20, normed=True, plotsOn = 1,center=1, CorI = 'Both',newFigure=True):
+def histPlot( sliceDict,saveResultDir = './savedResults', whichRun = 0, quickName = -1,tND = 350, bins=20, normed=True, plotsOn = 1,center=1, CorI = 'Both',newFigure=True):
 	from numpy import transpose, shape, squeeze, ndarray, array, mean, exp, atleast_2d, nonzero, mean
 
 	import pylab as pl
 	import pickle
 	if quickName == -1:
-		quickName = getLastQuickName(saveResultDir = 'savedResults')
+		quickName = getLastQuickName(saveResultDir = './savedResults')
 
 	# Get hash value:
-	hashInd = int(export1Elem( sliceDict, whatToReturn = 'FC',saveResultDir = 'savedResults', whichRun = whichRun, quickName = quickName,tND = tND))
+	hashInd = int(export1Elem( sliceDict, whatToReturn = 'FC',saveResultDir = './savedResults', whichRun = whichRun, quickName = quickName,tND = tND))
 	
 	# Load actual data:
 	ID = quickNameToID(quickName, saveResultDir, whichRun=whichRun)
 	fileName = getFileString(ID,'dat', saveResultDir)
 	first,second = fileName.split('.')
 	fileName = first + 'Hash' + '.' +second
-	fIn = open('./' + saveResultDir + '/' + fileName,'r')
+	fIn = open(saveResultDir + '/' + fileName,'r')
 	resultTuple = pickle.load(fIn)
 	myRTData = transpose(atleast_2d(resultTuple[0][hashInd]))
 	if CorI == 'Both':
@@ -1046,7 +1119,7 @@ def histPlot( sliceDict,saveResultDir = 'savedResults', whichRun = 0, quickName 
 	
 ################################################################################
 # This function plots a two histograms, for correct and incorrect results:
-def histPlotCICompare(sliceDict,saveResultDir = 'savedResults', whichRun = 0, quickName = -1,tND = 350, bins=20, normed=True, plotsOn = 1,center=1,newFigure=True):
+def histPlotCICompare(sliceDict,saveResultDir = './savedResults', whichRun = 0, quickName = -1,tND = 350, bins=20, normed=True, plotsOn = 1,center=1,newFigure=True):
 
 	# Import necessary functions:
 	import pylab as pl
@@ -1079,13 +1152,13 @@ def histPlotCICompare(sliceDict,saveResultDir = 'savedResults', whichRun = 0, qu
 
 ################################################################################
 # This function plots a multi-histogram plot:
-def histPlotMultiBar(sliceDict,saveResultDir = 'savedResults', whichRun = 0, quickName = -1,tND = 350, bins=20, normed=True, plotsOn = 1,center=1,N=2, newFigure=True):
+def histPlotMultiBar(sliceDict,saveResultDir = './savedResults', whichRun = 0, quickName = -1,tND = 350, bins=20, normed=True, plotsOn = 1,center=1,N=2, newFigure=True):
 
 	from numpy import transpose, shape, squeeze, ndarray, array, mean, exp, atleast_2d, linspace, concatenate
 	import pylab as pl
 	import pickle
 	if quickName == -1:
-		quickName = getLastQuickName(saveResultDir = 'savedResults')
+		quickName = getLastQuickName(saveResultDir = './savedResults')
 
 	# Get data:
 	crossTimeData, resultData, dims, settings, FD, numberOfJobs, gitVersion =  getDataAndSettings(quickName, saveResultDir, whichRun)
@@ -1106,14 +1179,14 @@ def histPlotMultiBar(sliceDict,saveResultDir = 'savedResults', whichRun = 0, qui
 	hashInd = [0]*len(seqDimensionList)
 	for i in range(len(hashInd)):
 		sliceDict[seqDimension] = seqDimensionList[i]
-		hashInd[i] = int(export1Elem( sliceDict, whatToReturn = 'FC',saveResultDir = 'savedResults', whichRun = whichRun, quickName = quickName,tND = tND))
+		hashInd[i] = int(export1Elem( sliceDict, whatToReturn = 'FC',saveResultDir = './savedResults', whichRun = whichRun, quickName = quickName,tND = tND))
 	
 	# Load actual data:
 	ID = quickNameToID(quickName, saveResultDir, whichRun=whichRun)
 	fileName = getFileString(ID,'dat', saveResultDir)
 	first,second = fileName.split('.')
 	fileName = first + 'Hash' + '.' +second
-	fIn = open('./' + saveResultDir + '/' + fileName,'r')
+	fIn = open(saveResultDir + '/' + fileName,'r')
 	resultTuple = pickle.load(fIn)
 	
 	myRTData = [0]*len(seqDimensionList)
@@ -1138,7 +1211,7 @@ def histPlotMultiBar(sliceDict,saveResultDir = 'savedResults', whichRun = 0, qui
 	
 ################################################################################
 # This function determines error between a slice and data:
-def sliceErr(sliceDict, FRorFD='FR', saveResultDir='savedResults', quickName=-1, whichRun=0, tND=350):
+def sliceErr(sliceDict, FRorFD='FR', saveResultDir='./savedResults', quickName=-1, whichRun=0, tND=350):
 	
 	# Import packages
 	import copy
@@ -1146,8 +1219,8 @@ def sliceErr(sliceDict, FRorFD='FR', saveResultDir='savedResults', quickName=-1,
 	import pylab as pl
 	
 	# Settings:
-	FCWeight = 1
-	RTWeight = 0
+	FCWeight = .5
+	RTWeight = .5
 	
 	# Set x-axis to coherence:
 	sliceDict['XVar'] = 'COn'
@@ -1193,7 +1266,7 @@ def sliceErr(sliceDict, FRorFD='FR', saveResultDir='savedResults', quickName=-1,
 
 ################################################################################
 # This function sweeps across noiseSigma and theta, to minimize error:
-def minimizeNoiseTheta(theta = 'Free', noiseSigma = 'Free', betaSigma = 0, chopHat = 0, FRorFD='FR', saveResultDir='savedResults', quickName=-1, whichRun=0, tND=350, saveFig = 0):
+def minimizeNoiseTheta(theta = 'Free', noiseSigma = 'Free', betaSigma = 0, chopHat = 0, FRorFD='FR', saveResultDir='./savedResults', quickName=-1, whichRun=0, tND=350, saveFig = 0):
 
 	# Import packages:
 	import numpy as np
@@ -1294,7 +1367,7 @@ def intErfAB(a, b, mu=0, sigma=1):
 
 ################################################################################
 # Report the threshold ratio of a given slice:
-def threshRatio(sliceDict,saveResultDir = 'savedResults', whichRun = 0, quickName = -1,tND=350):
+def threshRatio(sliceDict,saveResultDir = './savedResults', whichRun = 0, quickName = -1,tND=350):
 
 	# Import necessary stuff:
 	from copy import copy
@@ -1347,7 +1420,7 @@ def threshRatio(sliceDict,saveResultDir = 'savedResults', whichRun = 0, quickNam
 
 ################################################################################
 # Plot 1-d Log plot:
-def plot1DLog(sliceDict, whatToPlot, saveResultDir = 'savedResults', whichRun = 0, quickName = -1, tDel = 2000, tPen = 0, tND=350, newFigure = 1):
+def plot1DLog(sliceDict, whatToPlot, saveResultDir = './savedResults', whichRun = 0, quickName = -1, tDel = 2000, tPen = 0, tND=350, newFigure = 1, showFig = 1):
 
 	# Import necessary stuff:
 	import pylab as pl
@@ -1356,17 +1429,15 @@ def plot1DLog(sliceDict, whatToPlot, saveResultDir = 'savedResults', whichRun = 
 	if whatToPlot == 'Both':
 		plot1DLog(copy(sliceDict),'FC',saveResultDir=saveResultDir,whichRun=whichRun,quickName=quickName,tDel=tDel,tPen=tPen,tND=tND,newFigure = 1)
 		plot1DLog(copy(sliceDict),'RT',saveResultDir=saveResultDir,whichRun=whichRun,quickName=quickName,tDel=tDel,tPen=tPen,tND=tND,newFigure = 1)
+		
+		return
 	else:
 
-
-
 		# Get data:
-		X, Y = export1D(sliceDict, whatToPlot, tND=tND, whichRun=whichRun, quickName=quickName) 
-		
-		print X,Y
+		X, Y = export1D(sliceDict, whatToPlot, tND=tND, whichRun=whichRun, quickName=quickName,saveResultDir=saveResultDir)
 		
 		# Determine if FD or not:
-		inputSet = getSettings(whichRun=whichRun,quickName=quickName)[1]
+		inputSet = getSettings(saveResultDir=saveResultDir,whichRun=whichRun,quickName=quickName)[1]
 		if inputSet == 0:
 			inputSet = 'FR'
 		else:
@@ -1377,46 +1448,50 @@ def plot1DLog(sliceDict, whatToPlot, saveResultDir = 'savedResults', whichRun = 
 		roitmanXPrime = pl.log(pl.array([3.2,6.4,12.8,25.6,51.2]))
 		roitmanX = pl.concatenate(([0],roitmanXPrime - (roitmanXPrime[0]-(roitmanXPrime[-1]-roitmanXPrime[-2]))))
 
-		# Plot data, with pooling noise and roitman dots:
+		# Make plotting data:
 		logXPrime = pl.log(X[1:])
 		logX = pl.concatenate(([0], logXPrime - (roitmanXPrime[0]-(roitmanXPrime[-1]-roitmanXPrime[-2]))))
-
-		if newFigure: pl.figure()
-		pl.plot(logX,Y)
 		if whatToPlot == 'RT':
-			pl.plot(roitmanX, roitmanRT,'o')
+			roitmanY = roitmanRT
 		elif whatToPlot == 'FC':
-			pl.plot(roitmanX, roitmanFC,'o')
+			roitmanY = roitmanFC
 
-		# Set Axes:
-		if whatToPlot == 'FC':
-			XTick = pl.concatenate((pl.array([0]),pl.array([3.2,6.4,12.8,25.6,51.2])))
-			L = min(logX)
-			R = max(logX)
-			M = 1 + 0.05*(1-.5)
-			m = .5 - 0.05*(1-.5)
-			pl.xlim(L,R)
-			pl.ylim(m,M)
-			pl.xticks(roitmanX, XTick)
-			pl.yticks(pl.linspace(.5,1,6))
-			pl.xlabel('Dot Coherence (C)')
-			pl.ylabel('FC')
-		elif whatToPlot == 'RT':
-			XTick = pl.concatenate((pl.array([0]),pl.array([3.2,6.4,12.8,25.6,51.2])))
-			YTicks=[400,600,800,1000]
-			L = min(logX)
-			R = max(logX)
-			m=min(YTicks)
-			M=max(YTicks)
-			pl.xlim(L,R)
-			pl.ylim(m,M)
-			pl.xticks(roitmanX, XTick)
-			pl.yticks(pl.floor(pl.linspace(min(YTicks),max(YTicks),len(YTicks))))
-			pl.xlabel('Dot Coherence (C)')
-			pl.ylabel('RT (ms.)')
+		# Plot data, with pooling noise and roitman dots:
+		if showFig == 1:
+			if newFigure: pl.figure()
+			pl.plot(logX,Y)
+
+			pl.plot(roitmanX, roitmanY,'o')
+
+			# Set Axes:
+			if whatToPlot == 'FC':
+				XTick = pl.concatenate((pl.array([0]),pl.array([3.2,6.4,12.8,25.6,51.2])))
+				L = min(logX)
+				R = max(logX)
+				M = 1 + 0.05*(1-.5)
+				m = .5 - 0.05*(1-.5)
+				pl.xlim(L,R)
+				pl.ylim(m,M)
+				pl.xticks(roitmanX, XTick)
+				pl.yticks(pl.linspace(.5,1,6))
+				pl.xlabel('Dot Coherence (C)')
+				pl.ylabel('FC')
+			elif whatToPlot == 'RT':
+				XTick = pl.concatenate((pl.array([0]),pl.array([3.2,6.4,12.8,25.6,51.2])))
+				YTicks=[400,600,800,1000]
+				L = min(logX)
+				R = max(logX)
+				m=min(YTicks)
+				M=max(YTicks)
+				pl.xlim(L,R)
+				pl.ylim(m,M)
+				pl.xticks(roitmanX, XTick)
+				pl.yticks(pl.floor(pl.linspace(min(YTicks),max(YTicks),len(YTicks))))
+				pl.xlabel('Dot Coherence (C)')
+				pl.ylabel('RT (ms.)')
 
 
-	return
+	return ((roitmanX, roitmanY),(logX, Y))
 
 
 
