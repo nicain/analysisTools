@@ -1493,6 +1493,67 @@ def plot1DLog(sliceDict, whatToPlot, saveResultDir = './savedResults', whichRun 
 
 	return ((roitmanX, roitmanY),(logX, Y))
 
+################################################################################
+# This function plots a histogram:
+def tracePlot(sliceDict,saveResultDir = './savedResults', whichRun = 0, quickName = -1,tND = 350, plotsOn = 1, newFigure=True):
+	from numpy import transpose, shape, squeeze, ndarray, array, mean, exp, atleast_2d, nonzero, mean
+
+	import pylab as pl
+	import pickle
+	if quickName == -1:
+		quickName = getLastQuickName(saveResultDir = './savedResults')
+
+	# Get hash value:
+	hashInd = int(export1Elem( sliceDict, whatToReturn = 'FC',saveResultDir = './savedResults', whichRun = whichRun, quickName = quickName,tND = tND))
+	
+	# Load actual data:
+	ID = quickNameToID(quickName, saveResultDir, whichRun=whichRun)
+	fileName = getFileString(ID,'dat', saveResultDir)
+	first,second = fileName.split('.')
+	fileName = first + 'Hash' + '.' +second
+	fIn = open(saveResultDir + '/' + fileName,'r')
+	inTuple = pickle.load(fIn)
+	
+	resultTuple = inTuple[0][0]
+	crossTimeTuple = inTuple[0][1]
+	traceTuple = inTuple[1]
+	
+	print len(resultTuple), len(crossTimeTuple), len(traceTuple)
+	print len(resultTuple[0])
+	
+#	myRTData = transpose(atleast_2d(resultTuple[0][hashInd]))
+#	if CorI == 'Both':
+#		myRTDataPlot = myRTData + tND
+#	elif (CorI == 'C') or (CorI == 'I'):
+#		myFCData = transpose(atleast_2d(resultTuple[1][hashInd]))
+#		if CorI == 'C':
+#			targetValue = 1
+#		else:
+#			targetValue = 0
+#		targetIndices = nonzero(myFCData==targetValue)
+#		myRTDataPlot = myRTData[targetIndices]  + tND
+#	else:
+#		print 'Unrecognized option for CorI: ' + CorI
+#		from sys import exit
+#		exit(1)
+#
+#	# Center if desired:
+#	if center == 1:
+#		myRTDataPlot = myRTDataPlot - mean(myRTDataPlot)
+#	
+#	# Plot the histogram:
+#	if plotsOn:
+#		if newFigure: pl.figure()
+#		else: pl.figure(1).clear()
+#		histOut = pl.hist(myRTDataPlot,bins=bins,normed=normed)
+#	else:
+#		pl.figure(99)
+#		histOut = pl.hist(myRTDataPlot,bins=bins,normed=normed)
+#		pl.close(99)
+#	
+#	return histOut, myRTDataPlot
+	return
+
 
 
 
