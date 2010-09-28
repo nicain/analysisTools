@@ -865,7 +865,7 @@ def getDataAndSettings(quickName = -1, saveResultDir = './savedResults', whichRu
 	if quickName == -1:
 		quickName = getLastQuickName(saveResultDir = './savedResults')
 	
-	crossTimeData, resultData, tracesData, dims = getData(quickName=quickName, saveResultDir=saveResultDir, whichRun=whichRun)
+	crossTimeData, resultData, dims = getData(quickName=quickName, saveResultDir=saveResultDir, whichRun=whichRun)
 	settings, FD, numberOfJobs, gitVersion = getSettings(quickName, saveResultDir, whichRun=whichRun)
 	return (crossTimeData, resultData, dims, settings, FD, numberOfJobs, gitVersion)
 	
@@ -1040,20 +1040,18 @@ def export1Elem( sliceDict, whatToReturn = 'both',saveResultDir = './savedResult
 		quickName = getLastQuickName(saveResultDir = './savedResults')
 
 	# Get data:
-	crossTimeData, resultData, tracesData, dims, settings, FD, numberOfJobs, gitVersion =  getDataAndSettings(quickName, saveResultDir, whichRun)
+	crossTimeData, resultData, dims, settings, FD, numberOfJobs, gitVersion =  getDataAndSettings(quickName, saveResultDir, whichRun)
 	
 	# Reorder dimension list and cube:
 	permuteList = range(len(dims))
 	crossTimeData = transpose(crossTimeData,permuteList)
 	resultData = transpose(resultData,permuteList)
-	tracesData = transpose(tracesData,permuteList)
 	
 	# Collapse all non-constant dimensions:
 	crossDims = dims[:]
 	resultDims = dims[:]
-	tracesDims = dims[:]
 	for collapseDim in iter(sliceDict):
-		crossTimeData, resultData, tracesData, crossDims = reduce1D(crossTimeData, resultData, tracesData, crossDims, collapseDim, settings[collapseDim], sliceDict[collapseDim])
+		crossTimeData, resultData, crossDims = reduce1D(crossTimeData, resultData, crossDims, collapseDim, settings[collapseDim], sliceDict[collapseDim])
 	crossTimeSlice = squeeze(crossTimeData)
 	resultSlice = squeeze(resultData)
 
