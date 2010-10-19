@@ -80,7 +80,7 @@ def speedAccuracyMultiLine(sliceDict, saveResultDir = './savedResults', whichRun
 
 ################################################################################
 # This function plots speed accuracy tradeoff function:
-def speedAccuracy(sliceDict, saveResultDir = './savedResults',tDel = 2000, tPen = 0, tND = 350, whichRun = 0, newFigure = 1, quickName = -1, saveFig=0, plotLabels = 1, color = -1, lims = -1,pade=0, makePlot=1, thetaN = 'Default'):
+def speedAccuracy(sliceDict, saveResultDir = './savedResults',tDel = 2000, tPen = 0, tND = 350, whichRun = 0, newFigure = 1, quickName = -1, saveFig=0, plotLabels = 1, color = -1, lims = -1,pade=0, makePlot=1, thetaN = 'Default',smoothRT=True):
 	import pylab as pl
 	from numpy import transpose, shape, squeeze, ndarray, array, mean, exp
 	import copy
@@ -104,7 +104,9 @@ def speedAccuracy(sliceDict, saveResultDir = './savedResults',tDel = 2000, tPen 
 			
 		# Interpret length of x-vals being returned:
 		if N == 'Default':
-			N=len(x)
+			newX=x
+		else:
+			newX = sp.linspace(min(x),max(x),N)
 		
 		# Set up functions:
 		def res(p,y,x): return y-peval(x,p)
@@ -113,10 +115,10 @@ def speedAccuracy(sliceDict, saveResultDir = './savedResults',tDel = 2000, tPen 
 		
 		# Optimize:
 		if level == maxRecursion:
-			p0=[1,1,1,1,1,1,1,1,1,1]
+			p0=[3.02085062, 73.12081108, 21.30229217, -3.9648857, 0.73063049,
+				4.1510594, 98.33278803, 19.25003183, -4.01084408, 0.76591542]
 		elif level == maxRecursion-1:
-			p0=[317.41537167, -1146.79958272, 1695.42313448, 715.40164079, 79.73275651,
-			    462.86872028, -1719.11197335, 2601.63857965, 839.88221669, 90.31055117]
+			p0=[1,1,1,1,1,1,1,1,1,1]
 		else:
 			p0 = [r(),r(),r(),r(),r(),r(),r(),r(),r(),r()]
 		plsq = leastsq(res, p0, args=(y,transpose(x)),maxfev=5000)
@@ -124,7 +126,6 @@ def speedAccuracy(sliceDict, saveResultDir = './savedResults',tDel = 2000, tPen 
 		
 		# Return interpolated values:
 		def f(x): return peval(array(x),plsq[0])
-		newX = sp.linspace(min(x),max(x),N)
 		smoothY = f(newX)
 		
 		if (plsq[1] != 1) or (pl.linalg.norm(y/max(y)-f(x)/max(f(x))) > tol):
@@ -170,17 +171,21 @@ def speedAccuracy(sliceDict, saveResultDir = './savedResults',tDel = 2000, tPen 
 					  quickName=quickName, saveResultDir=saveResultDir))
 	
 	if pade:
-		if thetaN == 'Default':
-			thetaN=len(X[0])
-		thetaVals, myRT = padeApproxOfY(X[0],Y[0], N=thetaN)
-		pl.figure(201)
-		pl.plot(thetaVals, myRT)
-		pl.plot(X[0],Y[0])
+		
+		if smoothRT:
+			thetaVals, myRT = padeApproxOfY(X[0],Y[0], N=thetaN)
+			pl.figure(201)
+			pl.plot(thetaVals, myRT)
+			pl.plot(X[0],Y[0],'--')
+		else:
+			myRT=Y[0]
+			pl.figure(201)
+			pl.plot(X[0],Y[0],'--')
 
 		thetaVals, myFC = padeApproxOfY(X[1],Y[1], N=thetaN)
 		pl.figure(202)
 		pl.plot(thetaVals, myFC)
-		pl.plot(X[1],Y[1])
+		pl.plot(X[1],Y[1],'--')
 	else:
 		myRT, myFC = Y[0],Y[1]
 		thetaVals = X[0]
@@ -957,7 +962,7 @@ def getTrials(quickName = -1, saveResultDir = './savedResults'):
 def getRoitmanPsyChr(inputSet):
 
 	import os
-	dataSetDir = '/Users/Nick/Desktop/currentProjects/DDMCubeTeragrid/'
+	dataSetDir = '/Users/Nick/Desktop/localProjects/DDMCubeTeragrid/'
 
 	if inputSet == 'FR':
 		psyChrFileName = 'Roitman_data_psychoCronoData.dat'
@@ -1495,7 +1500,7 @@ def plot1DLog(sliceDict, whatToPlot, saveResultDir = './savedResults', whichRun 
 
 ################################################################################
 # This function plots a histogram:
-def tracePlot(sliceDict,saveResultDir = './savedResults', whichRun = 0, quickName = -1,tND = 350, plotsOn = 1, newFigure=True):
+def traceSets(sliceDict,saveResultDir = './savedResults', whichRun = 0, quickName = -1,tND = 350):
 	from numpy import transpose, shape, squeeze, ndarray, array, mean, exp, atleast_2d, nonzero, mean
 
 	import pylab as pl
@@ -1514,45 +1519,165 @@ def tracePlot(sliceDict,saveResultDir = './savedResults', whichRun = 0, quickNam
 	fIn = open(saveResultDir + '/' + fileName,'r')
 	inTuple = pickle.load(fIn)
 	
-	resultTuple = inTuple[0][0]
-	crossTimeTuple = inTuple[0][1]
-	traceTuple = inTuple[1]
+	# Break apart into relevent data:
+	resultTuple = inTuple[0][0][hashInd]
+	crossTimeTuple = inTuple[0][1][hashInd]
+	traceTuple = inTuple[1][hashInd]
 	
-	print len(resultTuple), len(crossTimeTuple), len(traceTuple)
-	print len(resultTuple[0])
+	traceSets = [0]*len(resultTuple)
+	for i in range(len(traceSets)):
+		traceSets[i] = [crossTimeTuple[i], resultTuple[i], 
+			traceTuple[i][0], traceTuple[i][1], traceTuple[i][2], traceTuple[i][3]]
 	
-#	myRTData = transpose(atleast_2d(resultTuple[0][hashInd]))
-#	if CorI == 'Both':
-#		myRTDataPlot = myRTData + tND
-#	elif (CorI == 'C') or (CorI == 'I'):
-#		myFCData = transpose(atleast_2d(resultTuple[1][hashInd]))
-#		if CorI == 'C':
-#			targetValue = 1
-#		else:
-#			targetValue = 0
-#		targetIndices = nonzero(myFCData==targetValue)
-#		myRTDataPlot = myRTData[targetIndices]  + tND
-#	else:
-#		print 'Unrecognized option for CorI: ' + CorI
-#		from sys import exit
-#		exit(1)
-#
-#	# Center if desired:
-#	if center == 1:
-#		myRTDataPlot = myRTDataPlot - mean(myRTDataPlot)
-#	
-#	# Plot the histogram:
-#	if plotsOn:
-#		if newFigure: pl.figure()
-#		else: pl.figure(1).clear()
-#		histOut = pl.hist(myRTDataPlot,bins=bins,normed=normed)
-#	else:
-#		pl.figure(99)
-#		histOut = pl.hist(myRTDataPlot,bins=bins,normed=normed)
-#		pl.close(99)
-#	
-#	return histOut, myRTDataPlot
+	return traceSets
+
+################################################################################
+# Decision-Triggered Stimulus:
+def DTSPlot(sliceDict={},saveResultDir = './savedResults', whichRun = 0, quickName = -1,tND = 350, plotN = 10, N='default', align='end'):
+
+	# Import necessary functions:
+	import pylab as pl
+	
+	# Get data:
+	myTraceSets = traceSets(sliceDict,saveResultDir=saveResultDir, whichRun=whichRun, quickName=quickName,tND=tND)
+	if N=='default':
+		N = len(myTraceSets)
+	
+	# Find Max t-length:
+	minTLen = 10000000000
+	for i in range(N):
+		tmpTLen = len(myTraceSets[i][2])
+		if tmpTLen < minTLen:
+			minTLen = tmpTLen
+	pl.figure()
+	
+	# Make stimulus average:
+	if align == 'end':
+		allTraces = pl.zeros((N,minTLen))
+		for i in range(N):
+			if len(myTraceSets[i][3][-minTLen-1:-1]) < minTLen:
+				if myTraceSets[i][0] == 1:
+					allTraces[i,:] = myTraceSets[i][3]
+				else:
+					allTraces[i,:] = myTraceSets[i][3]*-1
+				tPlot = myTraceSets[i][2]
+			else:
+				if myTraceSets[i][0] == 1:
+					allTraces[i,:] = myTraceSets[i][3][-minTLen-1:-1]
+				else:
+					allTraces[i,:] = myTraceSets[i][3][-minTLen-1:-1]*-1
+		IMeanPlot = pl.mean(allTraces,0)
+		IStdPlot = pl.std(allTraces,0)
+		tPlot = (-1)*(tPlot[::-1])
+
+	elif align == 'begin':
+		allTraces = pl.zeros((N,minTLen))
+		for i in range(N):
+			if len(myTraceSets[i][3]) == minTLen:
+				if myTraceSets[i][0] == 1:
+					allTraces[i,:] = myTraceSets[i][3]
+				else:
+					allTraces[i,:] = myTraceSets[i][3]*-1
+				tPlot = myTraceSets[i][2]
+			else:
+				if myTraceSets[i][0] == 1:
+					allTraces[i,:] = myTraceSets[i][3][0:minTLen]
+				else:
+					allTraces[i,:] = myTraceSets[i][3][0:minTLen]*-1
+		IMeanPlot = pl.mean(allTraces,0)
+		IStdPlot = pl.std(allTraces,0)
+
+	else:
+		print 'typo:'
+
+	for i in range(plotN):
+		pl.plot(tPlot,allTraces[i,:],'k',linewidth=.5)
+	
+	pl.plot(tPlot,IMeanPlot,'b',linewidth=2)
+	pl.plot(tPlot,IStdPlot,'r--',linewidth=2)
 	return
+	
+################################################################################
+# Trial-Averaged Integrator traces:
+def TAIPlot(sliceDict={},saveResultDir = './savedResults', whichRun = 0, quickName = -1,tND = 350, plotN = 10, N='default', align='end', plotStd=False):
+
+	# Import necessary functions:
+	import pylab as pl
+	
+	# Get data:
+	myTraceSets = traceSets(sliceDict,saveResultDir=saveResultDir, whichRun=whichRun, quickName=quickName,tND=tND)
+	if N=='default':
+		N = len(myTraceSets)
+	
+	# Pick all traces:
+	myTraces = range(N)
+	
+	# Find min t-length:
+	minTLen = 10000000000
+	for i in myTraces:
+		tmpTLen = len(myTraceSets[i][2])
+		if tmpTLen < minTLen:
+			minTLen = tmpTLen
+	pl.figure()
+		
+	if align == 'end':
+		
+		# Make stimulus average:
+		allTraces = pl.zeros((len(myTraces),minTLen))
+		for i in myTraces:
+			if len(myTraceSets[i][4][-minTLen-1:-1]) < minTLen:
+				if myTraceSets[i][0] == 1:
+					allTraces[i,:] = myTraceSets[i][4]
+				else:
+					allTraces[i,:] = myTraceSets[i][5]
+				tPlot = myTraceSets[i][2]
+			else:
+				if myTraceSets[i][0] == 1:
+					allTraces[i,:] = myTraceSets[i][4][-minTLen-1:-1]
+				else:
+					allTraces[i,:] = myTraceSets[i][5][-minTLen-1:-1]
+		IMeanPlot = pl.mean(allTraces,0)
+		IStdPlot = pl.std(allTraces,0)
+		tPlot = (-1)*(tPlot[::-1])
+		
+	elif align == 'begin':
+		
+		# Make stimulus average:
+		allTraces = pl.zeros((len(myTraces),minTLen))
+		for i in myTraces:
+			if len(myTraceSets[i][4]) == minTLen:
+				if myTraceSets[i][0] == 1:
+					allTraces[i,:] = myTraceSets[i][4]
+				else:
+					allTraces[i,:] = myTraceSets[i][5]
+				tPlot = myTraceSets[i][2]
+			else:
+				if myTraceSets[i][0] == 1:
+					allTraces[i,:] = myTraceSets[i][4][0:minTLen]
+				else:
+					allTraces[i,:] = myTraceSets[i][5][0:minTLen]
+		IMeanPlot = pl.mean(allTraces,0)
+		IStdPlot = pl.std(allTraces,0)
+	
+	else:
+		print 'typo:'
+		
+
+	for i in range(plotN):
+		pl.plot(tPlot,allTraces[i,:],'k',linewidth=.5)
+	
+	pl.plot(tPlot,IMeanPlot,'b',linewidth=2)
+	
+	if plotStd:
+		pl.plot(tPlot,IStdPlot,'r--',linewidth=2)
+	return
+
+
+
+
+
+
+
 
 
 
