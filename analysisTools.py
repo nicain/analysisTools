@@ -1506,10 +1506,10 @@ def traceSets(sliceDict,saveResultDir = './savedResults', whichRun = 0, quickNam
 	import pylab as pl
 	import pickle
 	if quickName == -1:
-		quickName = getLastQuickName(saveResultDir = './savedResults')
+		quickName = getLastQuickName(saveResultDir = saveResultDir)
 
 	# Get hash value:
-	hashInd = int(export1Elem( sliceDict, whatToReturn = 'FC',saveResultDir = './savedResults', whichRun = whichRun, quickName = quickName,tND = tND))
+	hashInd = int(export1Elem( sliceDict, whatToReturn = 'FC',saveResultDir = saveResultDir, whichRun = whichRun, quickName = quickName,tND = tND))
 	
 	# Load actual data:
 	ID = quickNameToID(quickName, saveResultDir, whichRun=whichRun)
@@ -1533,144 +1533,183 @@ def traceSets(sliceDict,saveResultDir = './savedResults', whichRun = 0, quickNam
 
 ################################################################################
 # Decision-Triggered Stimulus:
-def DTSPlot(sliceDict={},saveResultDir = './savedResults', whichRun = 0, quickName = -1,tND = 350, plotN = 10, N='default', align='end'):
+def DTSPlot(sliceDict={},saveResultDir = './savedResults', whichRun = 0, quickName = -1,tND = 350, align='end',plotsOn=True, myTraces = 'Default'):
 
 	# Import necessary functions:
 	import pylab as pl
 	
 	# Get data:
 	myTraceSets = traceSets(sliceDict,saveResultDir=saveResultDir, whichRun=whichRun, quickName=quickName,tND=tND)
-	if N=='default':
-		N = len(myTraceSets)
 	
-	# Find Max t-length:
-	minTLen = 10000000000
-	for i in range(N):
+	# Pick traces:
+	if myTraces == 'Default':
+		myTraces = range(len(myTraceSets))
+	
+	# Find max t-length:
+	maxTLen = -1
+	for i in myTraces:
 		tmpTLen = len(myTraceSets[i][2])
-		if tmpTLen < minTLen:
-			minTLen = tmpTLen
-	pl.figure()
-	
-	# Make stimulus average:
+		if tmpTLen > maxTLen:
+			maxTLen = tmpTLenLen = tmpTLen
+		
 	if align == 'end':
-		allTraces = pl.zeros((N,minTLen))
-		for i in range(N):
-			if len(myTraceSets[i][3][-minTLen-1:-1]) < minTLen:
-				if myTraceSets[i][0] == 1:
-					allTraces[i,:] = myTraceSets[i][3]
-				else:
-					allTraces[i,:] = myTraceSets[i][3]*-1
-				tPlot = myTraceSets[i][2]
-			else:
-				if myTraceSets[i][0] == 1:
-					allTraces[i,:] = myTraceSets[i][3][-minTLen-1:-1]
-				else:
-					allTraces[i,:] = myTraceSets[i][3][-minTLen-1:-1]*-1
-		IMeanPlot = pl.mean(allTraces,0)
-		IStdPlot = pl.std(allTraces,0)
-		tPlot = (-1)*(tPlot[::-1])
 
+		# Make stimulus average:
+		allTraces = pl.zeros((len(myTraces),maxTLen))
+		nnzArray = pl.zeros(maxTLen)
+		counter = -1
+		for i in myTraces:
+			counter += 1
+			if myTraceSets[i][0] == 1:
+				allTraces[counter,0:len(myTraceSets[i][4][::-1])] = myTraceSets[i][3][::-1]
+				currLen = len(myTraceSets[i][4][::-1])
+			else:
+				allTraces[counter,0:len(myTraceSets[i][5][::-1])] = myTraceSets[i][3][::-1]*(-1)
+				currLen = len(myTraceSets[i][5][::-1])
+			allTraces[counter,(currLen):] = 0
+			
+			if len(myTraceSets[i][2][::-1]) == maxTLen:
+				tPlot = myTraceSets[i][2][::-1]*(-1)
+				
+		allTracesSum = pl.sum(allTraces,0)[::-1]
+		for i in range(maxTLen):
+			nnzArray[i] = len(pl.nonzero(allTraces[:,i])[0])
+		nnzArray = nnzArray[::-1]
+		xLimits = [-200,0]
+		yLimits = [0,15.3]
+		
 	elif align == 'begin':
-		allTraces = pl.zeros((N,minTLen))
-		for i in range(N):
-			if len(myTraceSets[i][3]) == minTLen:
-				if myTraceSets[i][0] == 1:
-					allTraces[i,:] = myTraceSets[i][3]
-				else:
-					allTraces[i,:] = myTraceSets[i][3]*-1
-				tPlot = myTraceSets[i][2]
+		
+		# Make stimulus average:
+		allTraces = pl.zeros((len(myTraces),maxTLen))
+		nnzArray = pl.zeros(maxTLen)
+		counter = -1
+		for i in myTraces:
+			counter += 1
+			if myTraceSets[i][0] == 1:
+				allTraces[counter,0:len(myTraceSets[i][4])] = myTraceSets[i][3]
+				currLen = len(myTraceSets[i][4])
 			else:
-				if myTraceSets[i][0] == 1:
-					allTraces[i,:] = myTraceSets[i][3][0:minTLen]
-				else:
-					allTraces[i,:] = myTraceSets[i][3][0:minTLen]*-1
-		IMeanPlot = pl.mean(allTraces,0)
-		IStdPlot = pl.std(allTraces,0)
-
+				allTraces[counter,0:len(myTraceSets[i][5])] = myTraceSets[i][3]*(-1)
+				currLen = len(myTraceSets[i][5])
+			allTraces[counter,(currLen):] = allTraces[counter,currLen-1]
+			
+			if len(myTraceSets[i][2]) == maxTLen:
+				tPlot = myTraceSets[i][2]
+				
+		allTracesSum = pl.sum(allTraces,0)
+		for i in range(maxTLen):
+			nnzArray[i] = len(pl.nonzero(allTraces[:,i])[0])
+		nnzArray[0] = len(myTraces)
+		xLimits = [0,500]
+		yLimits = [0,15.3]
+	
 	else:
 		print 'typo:'
 
-	for i in range(plotN):
-		pl.plot(tPlot,allTraces[i,:],'k',linewidth=.5)
+	IMeanPlot = allTracesSum/nnzArray
 	
-	pl.plot(tPlot,IMeanPlot,'b',linewidth=2)
-	pl.plot(tPlot,IStdPlot,'r--',linewidth=2)
+	# Plot mean trace
+	if plotsOn:
+		pl.figure()
+		pl.plot(tPlot,IMeanPlot,'b')
+		pl.xlim(xLimits)
+
+	return tPlot, IMeanPlot
+
 	return
 	
 ################################################################################
 # Trial-Averaged Integrator traces:
-def TAIPlot(sliceDict={},saveResultDir = './savedResults', whichRun = 0, quickName = -1,tND = 350, plotN = 10, N='default', align='end', plotStd=False):
+def TAIPlot(sliceDict={},saveResultDir = './savedResults', whichRun = 0, quickName = -1,tND = 350, align='begin', plotsOn=True):
 
 	# Import necessary functions:
 	import pylab as pl
 	
 	# Get data:
 	myTraceSets = traceSets(sliceDict,saveResultDir=saveResultDir, whichRun=whichRun, quickName=quickName,tND=tND)
-	if N=='default':
-		N = len(myTraceSets)
 	
 	# Pick all traces:
-	myTraces = range(N)
+	myTraces = range(len(myTraceSets))
 	
-	# Find min t-length:
-	minTLen = 10000000000
+	# Find max t-length:
+	maxTLen = -1
 	for i in myTraces:
 		tmpTLen = len(myTraceSets[i][2])
-		if tmpTLen < minTLen:
-			minTLen = tmpTLen
-	pl.figure()
+		if tmpTLen > maxTLen:
+			maxTLen = tmpTLenLen = tmpTLen
 		
 	if align == 'end':
-		
+
 		# Make stimulus average:
-		allTraces = pl.zeros((len(myTraces),minTLen))
+		allTraces = pl.zeros((len(myTraces),maxTLen))
+		nnzArray = pl.zeros(maxTLen)
 		for i in myTraces:
-			if len(myTraceSets[i][4][-minTLen-1:-1]) < minTLen:
-				if myTraceSets[i][0] == 1:
-					allTraces[i,:] = myTraceSets[i][4]
-				else:
-					allTraces[i,:] = myTraceSets[i][5]
-				tPlot = myTraceSets[i][2]
+			if myTraceSets[i][0] == 1:
+				allTraces[i,0:len(myTraceSets[i][4][::-1])] = myTraceSets[i][4][::-1]
+				currLen = len(myTraceSets[i][4][::-1])
 			else:
-				if myTraceSets[i][0] == 1:
-					allTraces[i,:] = myTraceSets[i][4][-minTLen-1:-1]
-				else:
-					allTraces[i,:] = myTraceSets[i][5][-minTLen-1:-1]
-		IMeanPlot = pl.mean(allTraces,0)
-		IStdPlot = pl.std(allTraces,0)
-		tPlot = (-1)*(tPlot[::-1])
+				allTraces[i,0:len(myTraceSets[i][5][::-1])] = myTraceSets[i][5][::-1]
+				currLen = len(myTraceSets[i][5][::-1])
+			allTraces[i,(currLen):] = 0
+			
+			if len(myTraceSets[i][2][::-1]) == maxTLen:
+				tPlot = myTraceSets[i][2][::-1]*(-1)
+				
+		allTracesSum = pl.sum(allTraces,0)[::-1]
+		for i in range(maxTLen):
+			nnzArray[i] = len(pl.nonzero(allTraces[:,i])[0])
+		nnzArray = nnzArray[::-1]
+		xLimits = [-200,0]
+		yLimits = [0,15.3]
 		
 	elif align == 'begin':
 		
 		# Make stimulus average:
-		allTraces = pl.zeros((len(myTraces),minTLen))
+		allTraces = pl.zeros((len(myTraces),maxTLen))
+		nnzArray = pl.zeros(maxTLen)
 		for i in myTraces:
-			if len(myTraceSets[i][4]) == minTLen:
-				if myTraceSets[i][0] == 1:
-					allTraces[i,:] = myTraceSets[i][4]
-				else:
-					allTraces[i,:] = myTraceSets[i][5]
-				tPlot = myTraceSets[i][2]
+			if myTraceSets[i][0] == 1:
+				allTraces[i,0:len(myTraceSets[i][4])] = myTraceSets[i][4]
+				currLen = len(myTraceSets[i][4])
 			else:
-				if myTraceSets[i][0] == 1:
-					allTraces[i,:] = myTraceSets[i][4][0:minTLen]
-				else:
-					allTraces[i,:] = myTraceSets[i][5][0:minTLen]
-		IMeanPlot = pl.mean(allTraces,0)
-		IStdPlot = pl.std(allTraces,0)
+				allTraces[i,0:len(myTraceSets[i][5])] = myTraceSets[i][5]
+				currLen = len(myTraceSets[i][5])
+			allTraces[i,(currLen):] = allTraces[i,currLen-1]
+			
+			if len(myTraceSets[i][2]) == maxTLen:
+				tPlot = myTraceSets[i][2]
+				
+		allTracesSum = pl.sum(allTraces,0)
+		for i in range(maxTLen):
+			nnzArray[i] = len(pl.nonzero(allTraces[:,i])[0])
+		nnzArray[0] = len(myTraces)
+		xLimits = [0,500]
+		yLimits = [0,15.3]
 	
 	else:
 		print 'typo:'
-		
 
-	for i in range(plotN):
-		pl.plot(tPlot,allTraces[i,:],'k',linewidth=.5)
+
+
+	EMeanPlot = allTracesSum/nnzArray
 	
-	pl.plot(tPlot,IMeanPlot,'b',linewidth=2)
+	# Plot mean trace
+	if plotsOn:
+		pl.figure()
+		pl.plot(tPlot,EMeanPlot,'b')
+		pl.xlim(xLimits)
+		pl.ylim(yLimits)
 	
-	if plotStd:
-		pl.plot(tPlot,IStdPlot,'r--',linewidth=2)
-	return
+	# Plot a few sample traces
+#	for i in range(plotN):
+#		pl.plot(tPlot,allTraces[i,:],'k',linewidth=.5)
+
+#	pl.figure()
+#	pl.plot(tPlot,nnzArray)
+
+
+	return tPlot, EMeanPlot
 
 
 
