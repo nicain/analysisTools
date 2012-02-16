@@ -122,7 +122,6 @@ def speedAccuracy(sliceDict, saveResultDir = './savedResults',tDel = 2000, tPen 
 		else:
 			p0 = [r(),r(),r(),r(),r(),r(),r(),r(),r(),r()]
 		plsq = leastsq(res, p0, args=(y,transpose(x)),maxfev=5000)
-		print plsq[0]
 		
 		# Return interpolated values:
 		def f(x): return peval(array(x),plsq[0])
@@ -142,6 +141,8 @@ def speedAccuracy(sliceDict, saveResultDir = './savedResults',tDel = 2000, tPen 
 	crossTimeData, resultData, dims, settings, FD, numberOfJobs, gitVersion =  getDataAndSettings(quickName=quickName, saveResultDir=saveResultDir, whichRun=whichRun)
 	crossTimeData += tND 
     
+
+	
 	# Reorder dimension list and cube to put theta variable last:
 	if 'theta' in sliceDict:
 		permuteList = range(len(dims))
@@ -160,7 +161,10 @@ def speedAccuracy(sliceDict, saveResultDir = './savedResults',tDel = 2000, tPen 
 	resultSlice = squeeze(resultData)
 	
 	# Get x and y data:
-	sliceDict['XVar'] = 'theta'
+	if 'thetaBegin' in settings:
+		sliceDict['XVar'] = 'thetaBegin'
+	elif 'theta' in settings:
+		sliceDict['XVar'] = 'theta'
 	counter = -1
 	X=[0]*2
 	Y=[0]*2
@@ -213,8 +217,11 @@ def speedAccuracy(sliceDict, saveResultDir = './savedResults',tDel = 2000, tPen 
 		
 		if saveFig != 0:
 			pl.savefig('/Users/Nick/Desktop/fig1.eps')
+			
+		pl.show()
 	
-	return thetaVals,myRT,myFC
+	return thetaVals,myRT,myFC 
+#	return myPlot  
 
 
 
@@ -923,7 +930,7 @@ def quickNameIDDictionary(saveResultDir = './savedResults',includeRepeats = 0):
 def quickNameToID(quickName = -1, saveResultDir = './savedResults', whichRun = 0):
 	import operator
 	if quickName == -1:
-		quickName = getLastQuickName(saveResultDir = './savedResults')
+		quickName = getLastQuickName(saveResultDir = saveResultDir)
 
 	currentDict = quickNameIDDictionary(saveResultDir=saveResultDir, includeRepeats = 1)
 	try: listOfIDTimeTuple = currentDict[quickName]
@@ -962,7 +969,7 @@ def getTrials(quickName = -1, saveResultDir = './savedResults'):
 def getRoitmanPsyChr(inputSet):
 
 	import os
-	dataSetDir = '/Users/Nick/Desktop/localProjects/DDMCubeTeragrid/'
+	dataSetDir = os.path.expanduser('~/Desktop/localProjects/DDMCubeTeragrid/')
 
 	if inputSet == 'FR':
 		psyChrFileName = 'Roitman_data_psychoCronoData.dat'
@@ -991,6 +998,26 @@ def getRoitmanRTCurve():
 	RTCurveFileName = 'Roitman_data_RTCurve_Coh_6.4.dat'
 	
 	return
+	
+################################################################################
+# This function loads the Roitman Data Set, RTCurve:
+def getRoitmanHistData(C, dataSetDir = '/Users/nicain/Desktop/localProjects/DDMCubeTeragrid/', subject = 'N'):	# subject either B or N
+	
+	# Import necessary packages:
+	from numpy import array
+	from os import path
+	
+	# Make file name:
+	fileName = subject + '_RT_' + str(float(C)) + '.dat'
+	
+	# Open file and get data:
+	RTData = []
+	f = open(path.join(dataSetDir,fileName), 'r')
+	for line in f:
+		if line != '\n':
+			RTData.append(float(line))
+	
+	return array(RTData)
 	
 ################################################################################
 # This function exports a 1-D slice:
@@ -1037,15 +1064,15 @@ def export1D( sliceDict, whatToPlot,saveResultDir = './savedResults', whichRun =
 	return xVals, depVar
 
 ################################################################################
-# This function exports a 1-D slice:
-def export1Elem( sliceDict, whatToReturn = 'both',saveResultDir = './savedResults', whichRun = 0, quickName = -1,tND = 350):
+# This function exports 1 element:
+def export1Elem( sliceDict, whatToReturn = 'both',saveResultDir = './savedResults', whichRun = 0, quickName = -1,tND = 350, tDel = 2000, tPen = 0):
 	from numpy import transpose, shape, squeeze, ndarray, array, mean, exp
 	import pylab as pl, copy
 	if quickName == -1:
 		quickName = getLastQuickName(saveResultDir = './savedResults')
 
 	# Get data:
-	crossTimeData, resultData, dims, settings, FD, numberOfJobs, gitVersion =  getDataAndSettings(quickName, saveResultDir, whichRun)
+	crossTimeData, resultData, dims, settings, FD, numberOfJobs, gitVersion =  getDataAndSettings(quickName = quickName, saveResultDir = saveResultDir, whichRun = whichRun)
 	
 	# Reorder dimension list and cube:
 	permuteList = range(len(dims))
@@ -1056,23 +1083,30 @@ def export1Elem( sliceDict, whatToReturn = 'both',saveResultDir = './savedResult
 	crossDims = dims[:]
 	resultDims = dims[:]
 	for collapseDim in iter(sliceDict):
-		crossTimeData, resultData, crossDims = reduce1D(crossTimeData, resultData, crossDims, collapseDim, settings[collapseDim], sliceDict[collapseDim])
+		crossTimeData, resultData, crossDims = reduce1D(crossTimeData, resultData, crossDims, collapseDim, settings[collapseDim], sliceDict[collapseDim], tDel = tDel, tPen = tPen, tND = tND)
 	crossTimeSlice = squeeze(crossTimeData)
 	resultSlice = squeeze(resultData)
-
-
+	
+	myFC = resultSlice.tolist()
+	myRT = crossTimeSlice.tolist() + tND
+	myRR = resultSlice.tolist()/(crossTimeSlice.tolist() + tND + tDel + tPen*resultSlice.tolist())*1000
+	
 	if whatToReturn == 'both':
-		return (crossTimeSlice.tolist() + tND, resultSlice.tolist())
+		return (myFC, myRT)
 	elif whatToReturn == 'FC':
-		return resultSlice.tolist()
+		return myFC
 	elif whatToReturn == 'RT':
-		return crossTimeSlice.tolist() + tND
+		return myRT
+	elif whatToReturn == 'RR':
+		return myRR
+	elif whatToReturn == 'all':
+		return (myFC, myRT, myRR)
 	else:
 		return -1
 
 ################################################################################
 # This function plots a histogram:
-def histPlot( sliceDict,saveResultDir = './savedResults', whichRun = 0, quickName = -1,tND = 350, bins=20, normed=True, plotsOn = 1,center=1, CorI = 'Both',newFigure=True):
+def histPlot( sliceDict,saveResultDir = './savedResults', whichRun = 0, quickName = -1, InvGauss=True, tND = 350, bins=20, normed=True, plotsOn = 1,center=1, CorI = 'Both',newFigure=True,maxT=-1,maxY=-1):
 	from numpy import transpose, shape, squeeze, ndarray, array, mean, exp, atleast_2d, nonzero, mean
 
 	import pylab as pl
@@ -1081,7 +1115,7 @@ def histPlot( sliceDict,saveResultDir = './savedResults', whichRun = 0, quickNam
 		quickName = getLastQuickName(saveResultDir = './savedResults')
 
 	# Get hash value:
-	hashInd = int(export1Elem( sliceDict, whatToReturn = 'FC',saveResultDir = './savedResults', whichRun = whichRun, quickName = quickName,tND = tND))
+	hashInd = int(export1Elem( sliceDict, whatToReturn = 'FC',saveResultDir = saveResultDir, whichRun = whichRun, quickName = quickName,tND = 0))
 	
 	# Load actual data:
 	ID = quickNameToID(quickName, saveResultDir, whichRun=whichRun)
@@ -1091,8 +1125,9 @@ def histPlot( sliceDict,saveResultDir = './savedResults', whichRun = 0, quickNam
 	fIn = open(saveResultDir + '/' + fileName,'r')
 	resultTuple = pickle.load(fIn)
 	myRTData = transpose(atleast_2d(resultTuple[0][hashInd]))
+	
 	if CorI == 'Both':
-		myRTDataPlot = myRTData + tND
+		myRTDataPlot = myRTData
 	elif (CorI == 'C') or (CorI == 'I'):
 		myFCData = transpose(atleast_2d(resultTuple[1][hashInd]))
 		if CorI == 'C':
@@ -1100,11 +1135,25 @@ def histPlot( sliceDict,saveResultDir = './savedResults', whichRun = 0, quickNam
 		else:
 			targetValue = 0
 		targetIndices = nonzero(myFCData==targetValue)
-		myRTDataPlot = myRTData[targetIndices]  + tND
+		myRTDataPlot = myRTData[targetIndices]
 	else:
 		print 'Unrecognized option for CorI: ' + CorI
 		from sys import exit
 		exit(1)
+		
+	# Set up tND:
+	if InvGauss == True:
+		for i in range(myRTDataPlot.shape[0]):
+			myRTDataPlot[i] += (inverseGaussian(mu = 250, sigma = 50))
+			
+		myRTDataPlot += tND - 250
+	else:
+		myRTDataPlot += tND
+
+	# Set a max time:
+	if maxT != -1:
+		ind=(myRTDataPlot < maxT).nonzero()
+		myRTDataPlot = myRTDataPlot[ind]
 
 	# Center if desired:
 	if center == 1:
@@ -1120,19 +1169,27 @@ def histPlot( sliceDict,saveResultDir = './savedResults', whichRun = 0, quickNam
 		histOut = pl.hist(myRTDataPlot,bins=bins,normed=normed)
 		pl.close(99)
 	
+#	print pl.mean(myRTDataPlot)
+#	print pl.std(myRTDataPlot)
+	
+	if maxT != -1:
+		pl.xlim([min(myRTDataPlot),max(myRTDataPlot)])
+	if maxY != -1:
+		pl.ylim([0,maxY])
+	
 	return histOut, myRTDataPlot
 	
 ################################################################################
 # This function plots a two histograms, for correct and incorrect results:
-def histPlotCICompare(sliceDict,saveResultDir = './savedResults', whichRun = 0, quickName = -1,tND = 350, bins=20, normed=True, plotsOn = 1,center=1,newFigure=True):
+def histPlotCICompare(sliceDict,saveResultDir = './savedResults', whichRun = 0, quickName = -1,tND = 350, bins=20, normed=True, plotsOn = 1,center=1,newFigure=True, maxT=-1, maxY=-1):
 
 	# Import necessary functions:
 	import pylab as pl
 	from numpy import mean
 
 	# Gather data:
-	histOutC, myCorrData = histPlot(sliceDict,saveResultDir=saveResultDir,whichRun=whichRun,quickName=quickName,tND=tND,bins=bins,normed=normed,plotsOn=0,center=center,CorI='C')
-	histOutI, myICorrData = histPlot(sliceDict,saveResultDir=saveResultDir,whichRun=whichRun,quickName=quickName,tND=tND,bins=bins,normed=normed,plotsOn=0,center=center,CorI='I')
+	histOutC, myCorrData = histPlot(sliceDict,saveResultDir=saveResultDir,whichRun=whichRun,quickName=quickName,tND=tND,bins=bins,normed=normed,plotsOn=0,center=center,CorI='C',maxT=maxT,maxY=-1)
+	histOutI, myICorrData = histPlot(sliceDict,saveResultDir=saveResultDir,whichRun=whichRun,quickName=quickName,tND=tND,bins=bins,normed=normed,plotsOn=0,center=center,CorI='I',maxT=maxT,maxY=-1)
 	
 	# Create plotting data, correct:
 	corrX = histOutC[1][0:-1]
@@ -1148,6 +1205,13 @@ def histPlotCICompare(sliceDict,saveResultDir = './savedResults', whichRun = 0, 
 	if newFigure: pl.figure()
 	pl.bar(corrX,corrY,width=widthC,color='green')
 	pl.bar(iCorrX,iCorrY,width=widthI,color='red')
+	
+	minTmp = min([min(corrX),min(iCorrX)])
+	maxTmp = max([max(corrX),max(iCorrX)])
+	if maxT != -1:
+		pl.xlim([minTmp,maxTmp])
+	if maxY != -1:
+		pl.ylim([maxY[0],maxY[1]])
 	
 	# Print mean of each dist:
 	print 'Mean, correct: ' + str(mean(myCorrData))
@@ -1271,7 +1335,7 @@ def sliceErr(sliceDict, FRorFD='FR', saveResultDir='./savedResults', quickName=-
 
 ################################################################################
 # This function sweeps across noiseSigma and theta, to minimize error:
-def minimizeNoiseTheta(theta = 'Free', noiseSigma = 'Free', betaSigma = 0, chopHat = 0, FRorFD='FR', saveResultDir='./savedResults', quickName=-1, whichRun=0, tND=350, saveFig = 0):
+def minimizeNoiseTheta(theta = 'Free', noiseSigma = 'Free', betaSigma = 0, chopHat = 0, FRorFD='FR', saveResultDir='./savedResults', quickName=-1, whichRun=0, tND=350, saveFig = 0, betaMu = 0):
 
 	# Import packages:
 	import numpy as np
@@ -1280,9 +1344,9 @@ def minimizeNoiseTheta(theta = 'Free', noiseSigma = 'Free', betaSigma = 0, chopH
 
 	# Settings:
 	if betaSigma == 0:
-		beta = ['Marginalize','Delta',[0]]
+		beta = ['Marginalize','Delta',[betaMu]]
 	else:
-		beta = ['Marginalize','Normal',[0,betaSigma]]
+		beta = ['Marginalize','Normal',[betaMu,betaSigma]]
 	uniqueString = 'chopHat: '+str(chopHat)+', beta: '+str(beta)
 
 	# Get settings for theta and noisesigma:
@@ -1304,6 +1368,7 @@ def minimizeNoiseTheta(theta = 'Free', noiseSigma = 'Free', betaSigma = 0, chopH
 			sliceDict['theta'] = thetaVals[i]
 			sliceDict['noiseSigma'] = noiseSigmaVals[j]
 			errorMatrix[i][j]=sliceErr(copy.copy(sliceDict), FRorFD=FRorFD, saveResultDir=saveResultDir, quickName=quickName, whichRun=whichRun, tND=tND)
+			print i,j,errorMatrix[i][j]
 
 	# Generate contour plot
 	pl.figure(1).clear()
@@ -1327,7 +1392,7 @@ def minimizeNoiseTheta(theta = 'Free', noiseSigma = 'Free', betaSigma = 0, chopH
 		pl.figure(1)
 		pl.savefig('/Users/Nick/Desktop/' + uniqueString + '_contour.eps')
 
-	return bestTheta, bestNoiseSigma, errorMatrix
+	return bestTheta, bestNoiseSigma
 
 
 
@@ -1629,8 +1694,11 @@ def TAIPlot(sliceDict={},saveResultDir = './savedResults', whichRun = 0, quickNa
 	# Get data:
 	myTraceSets = traceSets(sliceDict,saveResultDir=saveResultDir, whichRun=whichRun, quickName=quickName,tND=tND)
 	
-	# Pick all traces:
-	myTraces = range(len(myTraceSets))
+	# Pick only success traces traces:
+	myTraces = []
+	for i in range(len(myTraceSets)):
+		if myTraceSets[i][0] == 1:
+			myTraces.append(i)
 	
 	# Find max t-length:
 	maxTLen = -1
@@ -1644,14 +1712,16 @@ def TAIPlot(sliceDict={},saveResultDir = './savedResults', whichRun = 0, quickNa
 		# Make stimulus average:
 		allTraces = pl.zeros((len(myTraces),maxTLen))
 		nnzArray = pl.zeros(maxTLen)
+		counter = -1
 		for i in myTraces:
+			counter += 1
 			if myTraceSets[i][0] == 1:
-				allTraces[i,0:len(myTraceSets[i][4][::-1])] = myTraceSets[i][4][::-1]
+				allTraces[counter,0:len(myTraceSets[i][4][::-1])] = myTraceSets[i][4][::-1]
 				currLen = len(myTraceSets[i][4][::-1])
-			else:
-				allTraces[i,0:len(myTraceSets[i][5][::-1])] = myTraceSets[i][5][::-1]
-				currLen = len(myTraceSets[i][5][::-1])
-			allTraces[i,(currLen):] = 0
+#			else:
+#				allTraces[i,0:len(myTraceSets[i][5][::-1])] = myTraceSets[i][5][::-1]
+#				currLen = len(myTraceSets[i][5][::-1])
+			allTraces[counter,(currLen):] = 0
 			
 			if len(myTraceSets[i][2][::-1]) == maxTLen:
 				tPlot = myTraceSets[i][2][::-1]*(-1)
@@ -1668,14 +1738,16 @@ def TAIPlot(sliceDict={},saveResultDir = './savedResults', whichRun = 0, quickNa
 		# Make stimulus average:
 		allTraces = pl.zeros((len(myTraces),maxTLen))
 		nnzArray = pl.zeros(maxTLen)
+		counter = -1
 		for i in myTraces:
+			counter += 1
 			if myTraceSets[i][0] == 1:
-				allTraces[i,0:len(myTraceSets[i][4])] = myTraceSets[i][4]
+				allTraces[counter,0:len(myTraceSets[i][4])] = myTraceSets[i][4]
 				currLen = len(myTraceSets[i][4])
-			else:
-				allTraces[i,0:len(myTraceSets[i][5])] = myTraceSets[i][5]
-				currLen = len(myTraceSets[i][5])
-			allTraces[i,(currLen):] = allTraces[i,currLen-1]
+#			else:
+#				allTraces[i,0:len(myTraceSets[i][5])] = myTraceSets[i][5]
+#				currLen = len(myTraceSets[i][5])
+			allTraces[counter,(currLen):] = allTraces[counter,currLen-1]
 			
 			if len(myTraceSets[i][2]) == maxTLen:
 				tPlot = myTraceSets[i][2]
@@ -1711,7 +1783,38 @@ def TAIPlot(sliceDict={},saveResultDir = './savedResults', whichRun = 0, quickNa
 
 	return tPlot, EMeanPlot
 
+################################################################################
+# Generate inverse gaussian distribution, with given mean and standard deviation:
+def inverseGaussian(mu = 250, sigma = 50):
+	
+	# Import packages:
+	from random import normalvariate, random
+	from math import sqrt
+	
+	# Make sure we have floats:
+	mu = float(mu)
+	sigma = float(sigma)
+	
+	# Get lambda for formula:
+	lambdaVal = mu**3/sigma**2
 
+	# Generate Normal variate:
+	nu = normalvariate(0,1)
+	
+	# Square it:
+	y = nu**2
+	
+	# Apply obtuse relation:
+	x = mu + (mu**2)*y/(2*lambdaVal) - mu/(2*lambdaVal)*sqrt(4*mu*lambdaVal*y + (mu**2)*(y**2))
+	
+	# Make comparison value:
+	z = random()
+	
+	# Comparison:
+	if z <= mu/(mu+x):
+		return x
+	else:
+		return mu**2/x
 
 
 
